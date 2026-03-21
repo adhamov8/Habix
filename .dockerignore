@@ -1,0 +1,7 @@
+frontend
+uploads
+.git
+.idea
+*.md
+.env
+docker-compose.yml

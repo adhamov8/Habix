@@ -1,0 +1,904 @@
+basePath: /api/v1
+definitions:
+  domain.AdherenceBucket:
+    properties:
+      bucket:
+        type: string
+      count:
+        type: integer
+    type: object
+  domain.BadgeDefinition:
+    properties:
+      code:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: integer
+      title:
+        type: string
+    type: object
+  domain.Category:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  domain.Challenge:
+    properties:
+      category_id:
+        type: integer
+      created_at:
+        type: string
+      creator_id:
+        type: string
+      deadline_time:
+        type: string
+      description:
+        type: string
+      ends_at:
+        type: string
+      id:
+        type: string
+      invite_token:
+        type: string
+      is_public:
+        type: boolean
+      max_skips:
+        type: integer
+      starts_at:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      working_days:
+        items:
+          type: integer
+        type: array
+    type: object
+  domain.ChallengeStats:
+    properties:
+      distribution:
+        items:
+          $ref: '#/definitions/domain.AdherenceBucket'
+        type: array
+      participation_by_day:
+        items:
+          $ref: '#/definitions/domain.DayParticipation'
+        type: array
+    type: object
+  domain.ChallengeSummary:
+    properties:
+      avg_adherence:
+        type: number
+      best_performer:
+        $ref: '#/definitions/domain.ParticipantDetail'
+      participants:
+        items:
+          $ref: '#/definitions/domain.ParticipantDetail'
+        type: array
+      participants_finished:
+        type: integer
+      total_checkins:
+        type: integer
+      total_participants:
+        type: integer
+    type: object
+  domain.DayParticipation:
+    properties:
+      checked_in:
+        type: integer
+      date:
+        type: string
+      total_users:
+        type: integer
+    type: object
+  domain.LeaderboardEntry:
+    properties:
+      adherence_pct:
+        type: number
+      current_streak:
+        type: integer
+      done_days:
+        type: integer
+      max_streak:
+        type: integer
+      missed_days:
+        type: integer
+      total_working_days:
+        type: integer
+      user_id:
+        type: string
+      user_name:
+        type: string
+    type: object
+  domain.Notification:
+    properties:
+      body:
+        type: string
+      created_at:
+        type: string
+      data:
+        type: object
+      id:
+        type: string
+      is_read:
+        type: boolean
+      title:
+        type: string
+      type:
+        type: string
+      user_id:
+        type: string
+    type: object
+  domain.ParticipantDetail:
+    properties:
+      adherence:
+        type: number
+      done_days:
+        type: integer
+      max_streak:
+        type: integer
+      user_id:
+        type: string
+      user_name:
+        type: string
+    type: object
+  domain.PersonalStats:
+    properties:
+      active_challenges:
+        type: integer
+      avg_adherence_pct:
+        type: number
+      finished_challenges:
+        type: integer
+      max_streak:
+        type: integer
+      total_challenges:
+        type: integer
+    type: object
+  domain.Progress:
+    properties:
+      adherence_pct:
+        type: number
+      checked_in_today:
+        type: boolean
+      current_streak:
+        type: integer
+      done_days:
+        type: integer
+      is_working_day:
+        type: boolean
+      max_streak:
+        type: integer
+      total_days:
+        type: integer
+    type: object
+  domain.SimpleCheckIn:
+    properties:
+      challenge_id:
+        type: string
+      created_at:
+        type: string
+      date:
+        type: string
+      id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  domain.TokenPair:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  domain.User:
+    properties:
+      avatar_url:
+        type: string
+      bio:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      timezone:
+        type: string
+    type: object
+  domain.UserBadge:
+    properties:
+      badge_id:
+        type: integer
+      challenge_id:
+        type: string
+      code:
+        description: Joined fields
+        type: string
+      description:
+        type: string
+      earned_at:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      title:
+        type: string
+      user_id:
+        type: string
+    type: object
+  service.CreateChallengeParams:
+    properties:
+      category_id:
+        type: integer
+      deadline_time:
+        type: string
+      description:
+        type: string
+      ends_at:
+        type: string
+      is_public:
+        type: boolean
+      max_skips:
+        type: integer
+      starts_at:
+        type: string
+      title:
+        type: string
+      working_days:
+        items:
+          type: integer
+        type: array
+    type: object
+  service.UpdateChallengeParams:
+    properties:
+      category_id:
+        type: integer
+      deadline_time:
+        type: string
+      description:
+        type: string
+      ends_at:
+        type: string
+      is_public:
+        type: boolean
+      max_skips:
+        type: integer
+      starts_at:
+        type: string
+      title:
+        type: string
+      working_days:
+        items:
+          type: integer
+        type: array
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API для веб-сервиса коллективного трекинга привычек
+  title: Habix API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      parameters:
+      - description: Login credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.TokenPair'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      responses:
+        "204":
+          description: No Content
+      summary: Logout
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.TokenPair'
+      summary: Refresh tokens
+      tags:
+      - auth
+  /auth/register:
+    post:
+      parameters:
+      - description: Registration data
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.TokenPair'
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - auth
+  /badges:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.BadgeDefinition'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List all badge definitions
+      tags:
+      - badges
+  /categories:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Category'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List all categories
+      tags:
+      - categories
+  /challenges:
+    get:
+      parameters:
+      - description: Filter public
+        in: query
+        name: public
+        type: string
+      - description: Category ID
+        in: query
+        name: category
+        type: integer
+      - description: Search term
+        in: query
+        name: search
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Challenge'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List public challenges
+      tags:
+      - challenges
+    post:
+      parameters:
+      - description: Challenge data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/service.CreateChallengeParams'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Challenge'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new challenge
+      tags:
+      - challenges
+  /challenges/{id}:
+    get:
+      parameters:
+      - description: Challenge ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Challenge'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get challenge by ID
+      tags:
+      - challenges
+    patch:
+      parameters:
+      - description: Challenge ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/service.UpdateChallengeParams'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Challenge'
+      security:
+      - BearerAuth: []
+      summary: Update a challenge
+      tags:
+      - challenges
+  /challenges/{id}/checkin:
+    delete:
+      parameters:
+      - description: Challenge ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Undo today's check-in
+      tags:
+      - checkin
+    post:
+      parameters:
+      - description: Challenge ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.SimpleCheckIn'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Check in today
+      tags:
+      - checkin
+  /challenges/{id}/checkins:
+    get:
+      parameters:
+      - description: Challenge ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.SimpleCheckIn'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List all user check-ins in a challenge
+      tags:
+      - checkin
+  /challenges/{id}/finish:
+    post:
+      parameters:
+      - description: Challenge ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Finish a challenge
+      tags:
+      - challenges
+  /challenges/{id}/invite-link:
+    get:
+      parameters:
+      - description: Challenge ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get invite link for a challenge
+      tags:
+      - challenges
+  /challenges/{id}/join:
+    post:
+      parameters:
+      - description: Challenge ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Join a public challenge
+      tags:
+      - challenges
+  /challenges/{id}/leaderboard:
+    get:
+      parameters:
+      - description: Challenge ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.LeaderboardEntry'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get challenge leaderboard
+      tags:
+      - stats
+  /challenges/{id}/progress:
+    get:
+      parameters:
+      - description: Challenge ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Progress'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user progress in a challenge
+      tags:
+      - checkin
+  /challenges/{id}/stats:
+    get:
+      parameters:
+      - description: Challenge ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ChallengeStats'
+      security:
+      - BearerAuth: []
+      summary: Get challenge statistics
+      tags:
+      - stats
+  /challenges/{id}/summary:
+    get:
+      parameters:
+      - description: Challenge ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ChallengeSummary'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get finished challenge summary
+      tags:
+      - stats
+  /challenges/join/{inviteToken}:
+    post:
+      parameters:
+      - description: Invite token
+        in: path
+        name: inviteToken
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Join challenge by invite token
+      tags:
+      - challenges
+  /challenges/my:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Challenge'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List my challenges
+      tags:
+      - challenges
+  /notifications:
+    get:
+      parameters:
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Notification'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List notifications
+      tags:
+      - notifications
+  /notifications/{id}/read:
+    patch:
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Mark notification as read
+      tags:
+      - notifications
+  /notifications/read-all:
+    patch:
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Mark all notifications as read
+      tags:
+      - notifications
+  /notifications/unread-count:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get unread notification count
+      tags:
+      - notifications
+  /users/{id}/badges:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.UserBadge'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get user's badges
+      tags:
+      - badges
+  /users/{id}/profile:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user public profile
+      tags:
+      - users
+  /users/me:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - users
+    patch:
+      parameters:
+      - description: Update data
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+      security:
+      - BearerAuth: []
+      summary: Update current user profile
+      tags:
+      - users
+  /users/me/badges:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.UserBadge'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get current user's badges
+      tags:
+      - badges
+  /users/me/stats:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.PersonalStats'
+      security:
+      - BearerAuth: []
+      summary: Get personal stats
+      tags:
+      - stats
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
