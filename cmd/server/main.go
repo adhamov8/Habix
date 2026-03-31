@@ -2,17 +2,20 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 	_ "tracker/docs"
 	"tracker/internal/config"
 	"tracker/internal/db"
 	"tracker/internal/handler"
+	"tracker/internal/metrics"
 	appmiddleware "tracker/internal/middleware"
 	"tracker/internal/repository"
 	"tracker/internal/service"
@@ -29,14 +32,32 @@ import (
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("config: %v", err)
+		slog.Error("failed to load config", "error", err)
+		os.Exit(1)
 	}
+
+	// Configure slog
+	var level slog.Level
+	switch strings.ToLower(cfg.LogLevel) {
+	case "debug":
+		level = slog.LevelDebug
+	case "warn", "warning":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo
+	}
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
+	slog.SetDefault(logger)
 
 	database, err := db.Connect(cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("db: %v", err)
+		slog.Error("failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 	defer database.Close()
+	metrics.RegisterDBStats(database)
 
 	// Run migrations
 	migrationsDir := "/migrations"
@@ -44,13 +65,15 @@ func main() {
 		migrationsDir = "./internal/db/migrations"
 	}
 	if err := db.RunMigrations(database, migrationsDir); err != nil {
-		log.Fatalf("migrations: %v", err)
+		slog.Error("failed to run migrations", "error", err)
+		os.Exit(1)
 	}
 
 	// Ensure uploads directory exists
 	uploadDir := "./uploads"
 	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
-		log.Fatalf("uploads dir: %v", err)
+		slog.Error("failed to create uploads dir", "error", err)
+		os.Exit(1)
 	}
 
 	// Repositories
@@ -100,8 +123,12 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(appmiddleware.CORS)
-	r.Use(chimiddleware.Logger)
+	r.Use(appmiddleware.Metrics)
+	r.Use(appmiddleware.Logging(logger))
 	r.Use(chimiddleware.Recoverer)
+
+	// Prometheus metrics endpoint (no auth)
+	r.Handle("/metrics", promhttp.Handler())
 
 	// Serve uploaded files
 	fileServer := http.StripPrefix("/static/", http.FileServer(http.Dir(uploadDir)))
@@ -171,8 +198,9 @@ func main() {
 		})
 	})
 
-	log.Printf("server listening on :%s", cfg.Port)
+	slog.Info("server starting", "port", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, r); err != nil {
-		log.Fatalf("server: %v", err)
+		slog.Error("server stopped", "error", err)
+		os.Exit(1)
 	}
 }

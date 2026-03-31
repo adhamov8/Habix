@@ -2,9 +2,10 @@ package service
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
+	"tracker/internal/metrics"
 	"tracker/internal/repository"
 )
 
@@ -39,15 +40,20 @@ func (u *StatusUpdater) run() {
 
 	activated, err := u.challenges.ActivateUpcoming(ctx)
 	if err != nil {
-		log.Printf("status_updater: activate upcoming: %v", err)
+		slog.Error("activate upcoming challenges", "error", err)
 	} else if activated > 0 {
-		log.Printf("status_updater: activated %d challenges", activated)
+		slog.Info("activated upcoming challenges", "count", activated)
 	}
 
 	finished, err := u.challenges.FinishExpired(ctx)
 	if err != nil {
-		log.Printf("status_updater: finish expired: %v", err)
+		slog.Error("finish expired challenges", "error", err)
 	} else if finished > 0 {
-		log.Printf("status_updater: finished %d challenges", finished)
+		slog.Info("finished expired challenges", "count", finished)
+	}
+
+	// Update active challenges gauge
+	if count, err := u.challenges.CountActive(ctx); err == nil {
+		metrics.ActiveChallengesTotal.Set(float64(count))
 	}
 }

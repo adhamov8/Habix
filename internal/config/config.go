@@ -11,6 +11,7 @@ type Config struct {
 	DatabaseURL string
 	JWTSecret   string
 	Port        string
+	LogLevel    string
 }
 
 func Load() (*Config, error) {
@@ -20,6 +21,7 @@ func Load() (*Config, error) {
 		DatabaseURL: os.Getenv("DATABASE_URL"),
 		JWTSecret:   os.Getenv("JWT_SECRET"),
 		Port:        os.Getenv("PORT"),
+		LogLevel:    os.Getenv("LOG_LEVEL"),
 	}
 
 	if cfg.DatabaseURL == "" {

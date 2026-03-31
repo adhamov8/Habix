@@ -90,6 +90,13 @@ func (r *ChallengeRepository) FinishExpired(ctx context.Context) (int64, error) 
 	return res.RowsAffected()
 }
 
+// CountActive returns the number of challenges with status 'active'.
+func (r *ChallengeRepository) CountActive(ctx context.Context) (int, error) {
+	var count int
+	err := r.db.GetContext(ctx, &count, "SELECT COUNT(*) FROM challenges WHERE status = 'active'")
+	return count, err
+}
+
 // ListForUser returns challenges the user created or participates in.
 func (r *ChallengeRepository) ListForUser(ctx context.Context, userID uuid.UUID) ([]domain.Challenge, error) {
 	var list []domain.Challenge

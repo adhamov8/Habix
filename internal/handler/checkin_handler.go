@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"tracker/internal/metrics"
 	"tracker/internal/middleware"
 	"tracker/internal/service"
 )
@@ -60,6 +61,7 @@ func (h *CheckInHandler) CheckIn(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	metrics.CheckInsTotal.Inc()
 	jsonResponse(w, ci, http.StatusCreated)
 }
 

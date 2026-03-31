@@ -6,9 +6,21 @@ import (
 
 	"github.com/google/uuid"
 	"tracker/internal/domain"
+	"tracker/internal/repository"
 )
 
 // Repository interfaces for testability
+
+type UserRepo interface {
+	GetByEmail(ctx context.Context, email string) (*domain.User, error)
+	Create(ctx context.Context, user *domain.User) error
+}
+
+type TokenRepo interface {
+	Create(ctx context.Context, token *repository.RefreshToken) error
+	GetByHash(ctx context.Context, hash string) (*repository.RefreshToken, error)
+	Delete(ctx context.Context, hash string) error
+}
 
 type CheckInRepo interface {
 	Create(ctx context.Context, ci *domain.SimpleCheckIn) error

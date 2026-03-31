@@ -1,0 +1,2 @@
+ALTER TABLE checkins DROP COLUMN IF EXISTS comment;
+ALTER TABLE feed_events DROP COLUMN IF EXISTS data;

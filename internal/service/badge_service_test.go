@@ -11,75 +11,6 @@ import (
 	"tracker/internal/domain"
 )
 
-// --- Mock Badge Repo ---
-
-type mockBadgeRepo struct {
-	awarded     map[string]bool // code -> awarded
-	definitions []domain.BadgeDefinition
-	userBadges  []domain.UserBadge
-	challenges  int
-}
-
-func newMockBadgeRepo() *mockBadgeRepo {
-	return &mockBadgeRepo{
-		awarded: make(map[string]bool),
-		definitions: []domain.BadgeDefinition{
-			{ID: 1, Code: "first_checkin", Title: "Первый шаг", Icon: "✅"},
-			{ID: 2, Code: "streak_3", Title: "Три дня подряд", Icon: "🔥"},
-			{ID: 3, Code: "streak_7", Title: "Неделя огня", Icon: "⚡"},
-			{ID: 4, Code: "streak_30", Title: "Месяц дисциплины", Icon: "💎"},
-		},
-	}
-}
-
-func (m *mockBadgeRepo) ListDefinitions(_ context.Context) ([]domain.BadgeDefinition, error) {
-	return m.definitions, nil
-}
-func (m *mockBadgeRepo) GetDefinitionByCode(_ context.Context, code string) (*domain.BadgeDefinition, error) {
-	for _, bd := range m.definitions {
-		if bd.Code == code {
-			return &bd, nil
-		}
-	}
-	return nil, nil
-}
-func (m *mockBadgeRepo) Award(_ context.Context, _ uuid.UUID, code string, _ *uuid.UUID) (bool, error) {
-	if m.awarded[code] {
-		return false, nil // duplicate
-	}
-	m.awarded[code] = true
-	return true, nil
-}
-func (m *mockBadgeRepo) ListForUser(_ context.Context, _ uuid.UUID) ([]domain.UserBadge, error) {
-	return m.userBadges, nil
-}
-func (m *mockBadgeRepo) ListRecent(_ context.Context, _ int) ([]domain.UserBadge, error) {
-	return nil, nil
-}
-func (m *mockBadgeRepo) CountUserChallenges(_ context.Context, _ uuid.UUID) (int, error) {
-	return m.challenges, nil
-}
-
-// --- Mock CheckIn Repo for badge tests ---
-
-type mockBadgeCheckInRepo struct {
-	checkIns []domain.SimpleCheckIn
-}
-
-func (m *mockBadgeCheckInRepo) Create(_ context.Context, _ *domain.SimpleCheckIn) error { return nil }
-func (m *mockBadgeCheckInRepo) Delete(_ context.Context, _, _ uuid.UUID, _ time.Time) error {
-	return nil
-}
-func (m *mockBadgeCheckInRepo) ExistsForDate(_ context.Context, _, _ uuid.UUID, _ time.Time) (bool, error) {
-	return false, nil
-}
-func (m *mockBadgeCheckInRepo) ListForUser(_ context.Context, _, _ uuid.UUID) ([]domain.SimpleCheckIn, error) {
-	return m.checkIns, nil
-}
-func (m *mockBadgeCheckInRepo) ListForChallenge(_ context.Context, _ uuid.UUID) ([]domain.SimpleCheckIn, error) {
-	return nil, nil
-}
-
 // --- Tests ---
 
 func TestCheckAndAward_FirstCheckin(t *testing.T) {
@@ -95,17 +26,22 @@ func TestCheckAndAward_FirstCheckin(t *testing.T) {
 		WorkingDays: pq.Int64Array{0, 1, 2, 3, 4, 5, 6},
 	}
 
+	cr := newMockChallengeRepo()
+	cr.challenges[ch.ID] = ch
+	pr := newMockParticipantRepo()
+	pr.participants[pr.key(ch.ID, userID)] = true
+
 	badgeRepo := newMockBadgeRepo()
 	svc := NewBadgeService(
 		badgeRepo,
-		&mockBadgeCheckInRepo{
+		&mockCheckInRepo{
 			checkIns: []domain.SimpleCheckIn{
 				{ID: uuid.New(), ChallengeID: challengeID, UserID: userID, Date: today},
 			},
 		},
-		&mockChallengeRepo{challenge: ch},
-		&mockParticipantRepo{exists: true},
-		&mockFeedRepo{},
+		cr,
+		pr,
+		newMockFeedRepo(),
 	)
 
 	svc.CheckAndAward(context.Background(), userID, challengeID)
@@ -126,7 +62,6 @@ func TestCheckAndAward_Streak7(t *testing.T) {
 		WorkingDays: pq.Int64Array{0, 1, 2, 3, 4, 5, 6},
 	}
 
-	// Create 7 consecutive check-ins ending today
 	var checkIns []domain.SimpleCheckIn
 	for i := 6; i >= 0; i-- {
 		checkIns = append(checkIns, domain.SimpleCheckIn{
@@ -137,13 +72,18 @@ func TestCheckAndAward_Streak7(t *testing.T) {
 		})
 	}
 
+	cr := newMockChallengeRepo()
+	cr.challenges[ch.ID] = ch
+	pr := newMockParticipantRepo()
+	pr.participants[pr.key(ch.ID, userID)] = true
+
 	badgeRepo := newMockBadgeRepo()
 	svc := NewBadgeService(
 		badgeRepo,
-		&mockBadgeCheckInRepo{checkIns: checkIns},
-		&mockChallengeRepo{challenge: ch},
-		&mockParticipantRepo{exists: true},
-		&mockFeedRepo{},
+		&mockCheckInRepo{checkIns: checkIns},
+		cr,
+		pr,
+		newMockFeedRepo(),
 	)
 
 	svc.CheckAndAward(context.Background(), userID, challengeID)
@@ -166,28 +106,31 @@ func TestCheckAndAward_NoDuplicate(t *testing.T) {
 		WorkingDays: pq.Int64Array{0, 1, 2, 3, 4, 5, 6},
 	}
 
+	cr := newMockChallengeRepo()
+	cr.challenges[ch.ID] = ch
+	pr := newMockParticipantRepo()
+	pr.participants[pr.key(ch.ID, userID)] = true
+
 	badgeRepo := newMockBadgeRepo()
-	// Pre-award badge to simulate duplicate
 	badgeRepo.awarded["first_checkin"] = true
 
+	fr := newMockFeedRepo()
 	svc := NewBadgeService(
 		badgeRepo,
-		&mockBadgeCheckInRepo{
+		&mockCheckInRepo{
 			checkIns: []domain.SimpleCheckIn{
 				{ID: uuid.New(), ChallengeID: challengeID, UserID: userID, Date: today},
 			},
 		},
-		&mockChallengeRepo{challenge: ch},
-		&mockParticipantRepo{exists: true},
-		&mockFeedRepo{},
+		cr,
+		pr,
+		fr,
 	)
 
-	feedRepo := svc.feed.(*mockFeedRepo)
 	svc.CheckAndAward(context.Background(), userID, challengeID)
 
-	// Feed event should NOT be created for duplicate badge
 	hasBadgeFeed := false
-	for _, e := range feedRepo.events {
+	for _, e := range fr.events {
 		if e.Type == "badge_earned" {
 			hasBadgeFeed = true
 		}
