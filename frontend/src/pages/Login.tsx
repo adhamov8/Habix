@@ -7,21 +7,26 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [joining, setJoining] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
+
+  const pendingToken = localStorage.getItem('pending_invite_token')
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault(); setError('')
     try {
       await login(email, password)
 
-      // Check for pending invite
-      const pendingToken = localStorage.getItem('pendingInviteToken')
-      if (pendingToken) {
-        localStorage.removeItem('pendingInviteToken')
+      const token = localStorage.getItem('pending_invite_token')
+      if (token) {
+        localStorage.removeItem('pending_invite_token')
+        setJoining(true)
         try {
-          const { data } = await challengeApi.joinByInvite(pendingToken)
-          navigate(`/challenges/${data.challenge_id || data.id || ''}`)
+          const { data } = await challengeApi.joinByInvite(token)
+          const challengeId = data.challenge_id || data.id || ''
+          localStorage.setItem('toast_message', 'Вы успешно вступили в челлендж!')
+          navigate(`/challenges/${challengeId}`)
           return
         } catch {
           // Invite failed, go home
@@ -42,9 +47,27 @@ export default function Login() {
     <div style={{ maxWidth: 400, margin: '4rem auto', padding: '0 1rem' }}>
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔥</div>
-        <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Habix</h1>
+        <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Cohabit</h1>
         <p style={{ color: 'var(--color-text-secondary)' }}>Войдите в аккаунт</p>
       </div>
+      {pendingToken && (
+        <div style={{
+          background: 'var(--color-primary)',
+          color: '#fff',
+          padding: '0.75rem 1rem',
+          borderRadius: 'var(--radius)',
+          marginBottom: '1rem',
+          fontSize: '0.875rem',
+          textAlign: 'center',
+        }}>
+          Вы переходите по приглашению в челлендж. Войдите или зарегистрируйтесь, чтобы вступить автоматически.
+        </div>
+      )}
+      {joining && (
+        <div style={{ textAlign: 'center', marginBottom: '1rem', color: 'var(--color-text-secondary)' }}>
+          Вступаем в челлендж...
+        </div>
+      )}
       <div className="card">
         <form onSubmit={handleSubmit}>
           <div className="form-group">

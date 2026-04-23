@@ -7,7 +7,6 @@ git clone https://github.com/adhamov8/Habix.git
 cd Habix
  
 cp .env.example .env
-# Отредактируйте .env — укажите JWT_SECRET (любая длинная строка)
  
 docker compose up --build
 ```

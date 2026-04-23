@@ -7,9 +7,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/google/uuid"
 	"tracker/internal/domain"
 	"tracker/internal/repository"
+
+	"github.com/google/uuid"
 )
 
 type StatsService struct {

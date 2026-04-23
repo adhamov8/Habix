@@ -19,8 +19,11 @@ export default function Register() {
   const [password, setPassword] = useState('')
   const [serverError, setServerError] = useState('')
   const [touched, setTouched] = useState({ name: false, email: false, password: false })
+  const [joining, setJoining] = useState(false)
   const { register } = useAuth()
   const navigate = useNavigate()
+
+  const pendingToken = localStorage.getItem('pending_invite_token')
 
   const nameError = touched.name && (name.length < 2 || name.length > 50)
     ? 'Имя должно содержать от 2 до 50 символов' : ''
@@ -38,12 +41,15 @@ export default function Register() {
     e.preventDefault(); setServerError('')
     try {
       await register(email, password, name)
-      const pendingToken = localStorage.getItem('pendingInviteToken')
-      if (pendingToken) {
-        localStorage.removeItem('pendingInviteToken')
+      const token = localStorage.getItem('pending_invite_token')
+      if (token) {
+        localStorage.removeItem('pending_invite_token')
+        setJoining(true)
         try {
-          const { data } = await challengeApi.joinByInvite(pendingToken)
-          navigate(`/challenges/${data.challenge_id || data.id || ''}`)
+          const { data } = await challengeApi.joinByInvite(token)
+          const challengeId = data.challenge_id || data.id || ''
+          localStorage.setItem('toast_message', 'Вы успешно вступили в челлендж!')
+          navigate(`/challenges/${challengeId}`)
           return
         } catch { /* ignore */ }
       }
@@ -59,9 +65,29 @@ export default function Register() {
     <div style={{ maxWidth: 400, margin: '4rem auto', padding: '0 1rem' }}>
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔥</div>
-        <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Habix</h1>
-        <p style={{ color: 'var(--color-text-secondary)' }}>Создайте аккаунт</p>
+        <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Cohabit</h1>
+        <p style={{ color: 'var(--color-text-secondary)' }}>
+          {pendingToken ? 'Зарегистрируйтесь, чтобы вступить в челлендж' : 'Создайте аккаунт'}
+        </p>
       </div>
+      {pendingToken && (
+        <div style={{
+          background: 'var(--color-primary)',
+          color: '#fff',
+          padding: '0.75rem 1rem',
+          borderRadius: 'var(--radius)',
+          marginBottom: '1rem',
+          fontSize: '0.875rem',
+          textAlign: 'center',
+        }}>
+          Вы переходите по приглашению в челлендж. Войдите или зарегистрируйтесь, чтобы вступить автоматически.
+        </div>
+      )}
+      {joining && (
+        <div style={{ textAlign: 'center', marginBottom: '1rem', color: 'var(--color-text-secondary)' }}>
+          Вступаем в челлендж...
+        </div>
+      )}
       <div className="card">
         <form onSubmit={handleSubmit}>
           <div className="form-group">

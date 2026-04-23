@@ -7,10 +7,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
-	chimiddleware "github.com/go-chi/chi/v5/middleware"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	httpSwagger "github.com/swaggo/http-swagger/v2"
 	_ "tracker/docs"
 	"tracker/internal/config"
 	"tracker/internal/db"
@@ -19,9 +15,14 @@ import (
 	appmiddleware "tracker/internal/middleware"
 	"tracker/internal/repository"
 	"tracker/internal/service"
+
+	"github.com/go-chi/chi/v5"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
-// @title Habix API
+// @title Cohabit API
 // @version 1.0
 // @description API для веб-сервиса коллективного трекинга привычек
 // @host localhost:8080

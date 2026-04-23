@@ -26,6 +26,10 @@ const processQueue = (error: unknown, token: string | null) => {
   failedQueue = []
 }
 
+const refreshClient = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+})
+
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
@@ -34,7 +38,7 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    // If no tokens at all, propagate 401 to caller (e.g. JoinByInvite page)
+
     const hasToken = localStorage.getItem('access_token') || localStorage.getItem('refresh_token')
     if (!hasToken) {
       return Promise.reject(error)
@@ -59,8 +63,7 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('refresh_token')
       if (!refreshToken) throw new Error('No refresh token')
 
-      // Use the same api instance so baseURL is consistent
-      const { data } = await api.post('/auth/refresh', {
+      const { data } = await refreshClient.post('/auth/refresh', {
         refresh_token: refreshToken,
       })
 

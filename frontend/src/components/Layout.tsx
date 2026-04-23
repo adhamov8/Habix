@@ -125,10 +125,21 @@ export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [toast, setToast] = useState('')
 
-  // Close menu on route change
+
   useEffect(() => {
     setMenuOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    const msg = localStorage.getItem('toast_message')
+    if (msg) {
+      localStorage.removeItem('toast_message')
+      setToast(msg)
+      const timer = setTimeout(() => setToast(''), 4000)
+      return () => clearTimeout(timer)
+    }
   }, [location.pathname])
 
   const handleLogout = async () => {
@@ -147,7 +158,7 @@ export default function Layout() {
               {menuOpen ? '✕' : '☰'}
             </button>
             <Link to="/" className="nav-brand">
-              🔥 Habix
+              🔥 Cohabit
             </Link>
           </div>
           <nav className={`nav-links${menuOpen ? ' open' : ''}`}>
@@ -178,6 +189,24 @@ export default function Layout() {
           </div>
         </div>
       </header>
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: '5rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: '#27ae60',
+          color: '#fff',
+          padding: '0.75rem 1.5rem',
+          borderRadius: 'var(--radius)',
+          fontSize: '0.9rem',
+          fontWeight: 500,
+          zIndex: 1000,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        }}>
+          {toast}
+        </div>
+      )}
       <main className="container" style={{ paddingTop: '1.5rem' }}>
         <Outlet />
       </main>

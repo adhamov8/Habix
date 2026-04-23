@@ -4,17 +4,17 @@ import { userApi, User } from '../api/users'
 
 interface AuthState {
   user: User | null
-  loading: boolean
+  isInitialized: boolean
   setUser: (u: User | null) => void
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, name: string) => Promise<void>
   logout: () => Promise<void>
-  fetchUser: () => Promise<void>
+  init: () => Promise<void>
 }
 
 export const useAuth = create<AuthState>((set, get) => ({
   user: null,
-  loading: true,
+  isInitialized: false,
   setUser: (user) => set({ user }),
 
   login: async (email, password) => {
@@ -22,7 +22,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     localStorage.setItem('access_token', data.access_token)
     localStorage.setItem('refresh_token', data.refresh_token)
     const { data: user } = await userApi.getMe()
-    set({ user, loading: false })
+    set({ user, isInitialized: true })
   },
 
   register: async (email, password, name) => {
@@ -30,7 +30,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     localStorage.setItem('access_token', data.access_token)
     localStorage.setItem('refresh_token', data.refresh_token)
     const { data: user } = await userApi.getMe()
-    set({ user, loading: false })
+    set({ user, isInitialized: true })
   },
 
   logout: async () => {
@@ -38,27 +38,26 @@ export const useAuth = create<AuthState>((set, get) => ({
     if (rt) await authApi.logout(rt).catch(() => {})
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
-    set({ user: null, loading: false })
+    set({ user: null })
   },
 
-  fetchUser: async () => {
-    // Don't re-fetch if we already have a user (login/register just set it)
-    if (get().user) {
-      set({ loading: false })
-      return
-    }
+  init: async () => {
+    if (get().isInitialized) return
     const token = localStorage.getItem('access_token')
     if (!token) {
-      set({ user: null, loading: false })
+      set({ user: null, isInitialized: true })
       return
     }
     try {
       const { data } = await userApi.getMe()
-      set({ user: data, loading: false })
+      set({ user: data, isInitialized: true })
     } catch {
       localStorage.removeItem('access_token')
       localStorage.removeItem('refresh_token')
-      set({ user: null, loading: false })
+      set({ user: null, isInitialized: true })
     }
   },
 }))
+
+// Fire immediately on module load — non-blocking
+useAuth.getState().init()

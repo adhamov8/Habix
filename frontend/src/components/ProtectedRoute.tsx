@@ -1,17 +1,10 @@
-import { useEffect } from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 
 export default function ProtectedRoute() {
-  const { user, loading, fetchUser } = useAuth()
+  const { user, isInitialized } = useAuth()
 
-  useEffect(() => {
-    if (loading && !user) {
-      fetchUser()
-    }
-  }, [loading, user, fetchUser])
-
-  if (loading) {
+  if (!isInitialized) {
     return (
       <div className="container" style={{ textAlign: 'center', paddingTop: '4rem' }}>
         <p>Loading...</p>

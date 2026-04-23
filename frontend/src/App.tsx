@@ -14,8 +14,8 @@ import JoinByInvite from './pages/JoinByInvite'
 import NotFound from './pages/NotFound'
 
 function GuestRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
-  if (loading) return null
+  const { user, isInitialized } = useAuth()
+  if (!isInitialized) return <>{children}</>
   return user ? <Navigate to="/" replace /> : <>{children}</>
 }
 
