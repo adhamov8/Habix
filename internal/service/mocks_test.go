@@ -6,15 +6,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"tracker/internal/domain"
 	"tracker/internal/repository"
+
+	"github.com/google/uuid"
 )
 
 // --- UserRepo mock ---
 
 type mockUserRepo struct {
-	users map[string]*domain.User // keyed by email
+	users map[string]*domain.User
 }
 
 func newMockUserRepo() *mockUserRepo {
@@ -174,6 +175,10 @@ func (m *mockFeedRepo) Insert(_ context.Context, e *domain.FeedEvent) error {
 	return nil
 }
 
+func (m *mockFeedRepo) DeleteByReference(_ context.Context, _ uuid.UUID, _ string) error {
+	return nil
+}
+
 func (m *mockFeedRepo) ListByChallenge(_ context.Context, _ uuid.UUID, _, _ int) ([]domain.FeedEvent, error) {
 	return nil, nil
 }
@@ -201,6 +206,17 @@ func (m *mockCheckInRepo) ExistsForDate(_ context.Context, _, _ uuid.UUID, _ tim
 	return m.existsResult, m.existsErr
 }
 
+func (m *mockCheckInRepo) GetForDate(_ context.Context, _, _ uuid.UUID, _ time.Time) (*domain.SimpleCheckIn, error) {
+	if !m.existsResult {
+		return nil, sql.ErrNoRows
+	}
+	if len(m.checkIns) > 0 {
+		ci := m.checkIns[0]
+		return &ci, nil
+	}
+	return &domain.SimpleCheckIn{ID: uuid.New()}, nil
+}
+
 func (m *mockCheckInRepo) ListForUser(_ context.Context, _, _ uuid.UUID) ([]domain.SimpleCheckIn, error) {
 	return m.checkIns, nil
 }
@@ -212,10 +228,11 @@ func (m *mockCheckInRepo) ListForChallenge(_ context.Context, _ uuid.UUID) ([]do
 // --- BadgeRepo mock ---
 
 type mockBadgeRepo struct {
-	awarded     map[string]bool
-	definitions []domain.BadgeDefinition
-	userBadges  []domain.UserBadge
-	challenges  int
+	awarded            map[string]bool
+	definitions        []domain.BadgeDefinition
+	userBadges         []domain.UserBadge
+	challenges         int
+	finishedChallenges int
 }
 
 func newMockBadgeRepo() *mockBadgeRepo {
@@ -261,4 +278,8 @@ func (m *mockBadgeRepo) ListRecent(_ context.Context, _ int) ([]domain.UserBadge
 
 func (m *mockBadgeRepo) CountUserChallenges(_ context.Context, _ uuid.UUID) (int, error) {
 	return m.challenges, nil
+}
+
+func (m *mockBadgeRepo) CountFinishedChallengesForUser(_ context.Context, _ uuid.UUID) (int, error) {
+	return m.finishedChallenges, nil
 }

@@ -19,7 +19,7 @@ func Connect(databaseURL string) (*sqlx.DB, error) {
 	return db, nil
 }
 
-// RunMigrations applies all pending migrations using golang-migrate.
+// накатываем все непримененные миграции через golang-migrate
 func RunMigrations(db *sqlx.DB, migrationsDir string) error {
 	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
 	if err != nil {

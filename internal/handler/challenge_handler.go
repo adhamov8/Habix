@@ -117,7 +117,7 @@ func (h *ChallengeHandler) ListChallenges(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Default: list all public challenges (no filter)
+	// По умолчанию отдаём все публичные челленджи без фильтра
 	list, err := h.challengeSvc.ListPublic(r.Context(), nil, "", 20, 0)
 	if err != nil {
 		jsonError(w, "internal server error", http.StatusInternalServerError)
@@ -175,7 +175,17 @@ func (h *ChallengeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Compute status on the fly, but never overwrite manual "finished"
+	// Активируем сегодняшние upcoming-челленджи сразу при открытии,
+	// чтобы пользователь не ждал часового тика StatusUpdater.
+	if c.Status == "upcoming" && !c.StartsAt.After(time.Now().UTC()) {
+		if err := h.challengeSvc.UpdateStatus(r.Context(), c.ID, "active"); err == nil {
+			if refreshed, ferr := h.challengeSvc.GetByID(r.Context(), c.ID); ferr == nil {
+				c = refreshed
+			}
+		}
+	}
+
+	// Считаем статус на лету, но не трогаем, если челлендж уже завершён вручную
 	if c.Status != "finished" {
 		now := time.Now().UTC().Truncate(24 * time.Hour)
 		start := c.StartsAt.Truncate(24 * time.Hour)

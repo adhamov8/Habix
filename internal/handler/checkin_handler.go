@@ -20,7 +20,6 @@ func NewCheckInHandler(s *service.CheckInService) *CheckInHandler {
 	return &CheckInHandler{checkInSvc: s}
 }
 
-// CheckIn handles POST /challenges/{id}/checkin
 // @Summary Check in today
 // @Tags checkin
 // @Security BearerAuth
@@ -38,12 +37,13 @@ func (h *CheckInHandler) CheckIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Comment string `json:"comment"`
+		Comment  string `json:"comment"`
+		ImageURL string `json:"image_url"`
 	}
-	// Body is optional — empty body means empty comment
+	// Тело запроса необязательно — без него комментарий и фото будут пустыми
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
-	ci, err := h.checkInSvc.CheckIn(r.Context(), userID, challengeID, req.Comment)
+	ci, err := h.checkInSvc.CheckIn(r.Context(), userID, challengeID, req.Comment, req.ImageURL)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrNotFound):
@@ -53,6 +53,8 @@ func (h *CheckInHandler) CheckIn(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrNotParticipant):
 			jsonError(w, err.Error(), http.StatusForbidden)
 		case errors.Is(err, service.ErrNotWorkingDay):
+			jsonError(w, err.Error(), http.StatusBadRequest)
+		case errors.Is(err, service.ErrDeadlinePassed):
 			jsonError(w, err.Error(), http.StatusBadRequest)
 		case errors.Is(err, service.ErrAlreadyChecked):
 			jsonError(w, err.Error(), http.StatusConflict)
@@ -65,7 +67,6 @@ func (h *CheckInHandler) CheckIn(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, ci, http.StatusCreated)
 }
 
-// Undo handles DELETE /challenges/{id}/checkin
 // @Summary Undo today's check-in
 // @Tags checkin
 // @Security BearerAuth
@@ -83,6 +84,10 @@ func (h *CheckInHandler) Undo(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.checkInSvc.Undo(r.Context(), userID, challengeID); err != nil {
 		switch {
+		case errors.Is(err, service.ErrNotFound):
+			jsonError(w, "challenge not found", http.StatusNotFound)
+		case errors.Is(err, service.ErrUndoNotAllowed):
+			jsonError(w, err.Error(), http.StatusForbidden)
 		case errors.Is(err, service.ErrNotCheckedIn):
 			jsonError(w, err.Error(), http.StatusConflict)
 		default:
@@ -93,7 +98,6 @@ func (h *CheckInHandler) Undo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// GetProgress handles GET /challenges/{id}/progress
 // @Summary Get user progress in a challenge
 // @Tags checkin
 // @Security BearerAuth
@@ -121,7 +125,6 @@ func (h *CheckInHandler) GetProgress(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, progress, http.StatusOK)
 }
 
-// ListAll handles GET /challenges/{id}/checkins
 // @Summary List all user check-ins in a challenge
 // @Tags checkin
 // @Security BearerAuth

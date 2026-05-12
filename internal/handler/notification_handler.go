@@ -18,7 +18,6 @@ func NewNotificationHandler(s *service.NotificationService) *NotificationHandler
 	return &NotificationHandler{notifSvc: s}
 }
 
-// List handles GET /notifications
 // @Summary List notifications
 // @Tags notifications
 // @Security BearerAuth
@@ -54,7 +53,6 @@ func (h *NotificationHandler) List(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, list, http.StatusOK)
 }
 
-// UnreadCount handles GET /notifications/unread-count
 // @Summary Get unread notification count
 // @Tags notifications
 // @Security BearerAuth
@@ -71,7 +69,6 @@ func (h *NotificationHandler) UnreadCount(w http.ResponseWriter, r *http.Request
 	jsonResponse(w, map[string]int{"count": count}, http.StatusOK)
 }
 
-// MarkRead handles PATCH /notifications/{id}/read
 // @Summary Mark notification as read
 // @Tags notifications
 // @Security BearerAuth
@@ -93,7 +90,6 @@ func (h *NotificationHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// MarkAllRead handles PATCH /notifications/read-all
 // @Summary Mark all notifications as read
 // @Tags notifications
 // @Security BearerAuth

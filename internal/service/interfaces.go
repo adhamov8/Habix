@@ -4,12 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/uuid"
 	"tracker/internal/domain"
 	"tracker/internal/repository"
+
+	"github.com/google/uuid"
 )
 
-// Repository interfaces for testability
+// Интерфейсы репозиториев чтобы можно было подменять их моками в тестах
 
 type UserRepo interface {
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)
@@ -26,6 +27,7 @@ type CheckInRepo interface {
 	Create(ctx context.Context, ci *domain.SimpleCheckIn) error
 	Delete(ctx context.Context, challengeID, userID uuid.UUID, date time.Time) error
 	ExistsForDate(ctx context.Context, challengeID, userID uuid.UUID, date time.Time) (bool, error)
+	GetForDate(ctx context.Context, challengeID, userID uuid.UUID, date time.Time) (*domain.SimpleCheckIn, error)
 	ListForUser(ctx context.Context, challengeID, userID uuid.UUID) ([]domain.SimpleCheckIn, error)
 	ListForChallenge(ctx context.Context, challengeID uuid.UUID) ([]domain.SimpleCheckIn, error)
 }
@@ -50,6 +52,7 @@ type ParticipantRepo interface {
 
 type FeedRepo interface {
 	Insert(ctx context.Context, e *domain.FeedEvent) error
+	DeleteByReference(ctx context.Context, refID uuid.UUID, eventType string) error
 	ListByChallenge(ctx context.Context, challengeID uuid.UUID, limit, offset int) ([]domain.FeedEvent, error)
 }
 
@@ -60,4 +63,5 @@ type BadgeRepo interface {
 	ListForUser(ctx context.Context, userID uuid.UUID) ([]domain.UserBadge, error)
 	ListRecent(ctx context.Context, limit int) ([]domain.UserBadge, error)
 	CountUserChallenges(ctx context.Context, userID uuid.UUID) (int, error)
+	CountFinishedChallengesForUser(ctx context.Context, userID uuid.UUID) (int, error)
 }

@@ -35,7 +35,9 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   logout: async () => {
     const rt = localStorage.getItem('refresh_token')
-    if (rt) await authApi.logout(rt).catch(() => {})
+    if (rt) await authApi.logout(rt).catch((err) => {
+      console.error('Logout request failed (clearing local session anyway):', err)
+    })
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     set({ user: null })
@@ -59,5 +61,5 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 }))
 
-// Fire immediately on module load — non-blocking
+// Запускаем сразу, не блокируя загрузку
 useAuth.getState().init()

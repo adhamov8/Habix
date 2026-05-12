@@ -9,17 +9,33 @@ import (
 	"math"
 	"time"
 
-	"github.com/google/uuid"
 	"tracker/internal/domain"
+
+	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 var (
 	ErrNotParticipant     = errors.New("user is not a participant")
 	ErrNotWorkingDay      = errors.New("today is not a working day for this challenge")
-	ErrAlreadyChecked     = errors.New("already checked in today")
+	ErrAlreadyChecked     = errors.New("вы уже отметились сегодня")
 	ErrNotCheckedIn       = errors.New("not checked in today")
 	ErrChallengeNotActive = errors.New("challenge is not active")
+	ErrDeadlinePassed     = errors.New("время для отметки на сегодня уже истекло")
+	ErrUndoNotAllowed     = errors.New("отменить отметку можно только до дедлайна")
 )
+
+func deadlineTodayUTC(deadlineTime string, now time.Time) (time.Time, error) {
+	t, err := time.Parse("15:04:05", deadlineTime)
+	if err != nil {
+		t, err = time.Parse("15:04", deadlineTime)
+		if err != nil {
+			return time.Time{}, err
+		}
+	}
+	n := now.UTC()
+	return time.Date(n.Year(), n.Month(), n.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.UTC), nil
+}
 
 type CheckInService struct {
 	checkIns     CheckInRepo
@@ -38,13 +54,13 @@ func NewCheckInService(
 	return &CheckInService{checkIns: ci, challenges: ch, participants: p, feed: f}
 }
 
-// SetBadgeService sets the badge service for awarding badges after check-ins.
+// подключаем сервис достижений, чтобы выдавать значки после отметок
 func (s *CheckInService) SetBadgeService(bs *BadgeService) {
 	s.badgeSvc = bs
 }
 
-// CheckIn creates a check-in for today with an optional comment.
-func (s *CheckInService) CheckIn(ctx context.Context, userID, challengeID uuid.UUID, comment string) (*domain.SimpleCheckIn, error) {
+// создаём отметку на сегодня с необязательным комментарием и фото
+func (s *CheckInService) CheckIn(ctx context.Context, userID, challengeID uuid.UUID, comment, imageURL string) (*domain.SimpleCheckIn, error) {
 	challenge, err := s.challenges.GetByID(ctx, challengeID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -67,7 +83,6 @@ func (s *CheckInService) CheckIn(ctx context.Context, userID, challengeID uuid.U
 
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 
-	// Check working day
 	dayIdx := (int(today.Weekday()) + 6) % 7
 	isWorking := false
 	for _, wd := range challenge.WorkingDays {
@@ -80,7 +95,13 @@ func (s *CheckInService) CheckIn(ctx context.Context, userID, challengeID uuid.U
 		return nil, ErrNotWorkingDay
 	}
 
-	// Check not already checked in
+	now := time.Now().UTC()
+	if deadline, derr := deadlineTodayUTC(challenge.DeadlineTime, now); derr == nil {
+		if !now.Before(deadline) {
+			return nil, ErrDeadlinePassed
+		}
+	}
+
 	exists, err := s.checkIns.ExistsForDate(ctx, challengeID, userID, today)
 	if err != nil {
 		return nil, err
@@ -89,23 +110,31 @@ func (s *CheckInService) CheckIn(ctx context.Context, userID, challengeID uuid.U
 		return nil, ErrAlreadyChecked
 	}
 
+	var imageURLPtr *string
+	if imageURL != "" {
+		imageURLPtr = &imageURL
+	}
 	ci := &domain.SimpleCheckIn{
 		ID:          uuid.New(),
 		ChallengeID: challengeID,
 		UserID:      userID,
 		Date:        today,
 		Comment:     comment,
+		ImageURL:    imageURLPtr,
 	}
 
 	if err := s.checkIns.Create(ctx, ci); err != nil {
+		var pgErr *pq.Error
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, ErrAlreadyChecked
+		}
 		return nil, fmt.Errorf("create check-in: %w", err)
 	}
 
-	// Build feed event data with comment, day number and streak
 	allCheckIns, _ := s.checkIns.ListForUser(ctx, challengeID, userID)
 	dayNumber := len(allCheckIns)
 
-	// Compute current streak for feed display
+	// Считаем текущую серию, чтобы показать её в ленте
 	doneMap := make(map[string]bool)
 	for _, c := range allCheckIns {
 		doneMap[normalizeDate(c.Date).Format("2006-01-02")] = true
@@ -116,14 +145,17 @@ func (s *CheckInService) CheckIn(ctx context.Context, userID, challengeID uuid.U
 	}
 	currentStreak, _ := computeStreaksSimple(doneMap, challenge.StartsAt, challenge.EndsAt, wdSet)
 
-	feedData, _ := json.Marshal(map[string]any{
+	feedPayload := map[string]any{
 		"comment":    comment,
 		"day_number": dayNumber,
 		"streak":     currentStreak,
-	})
+	}
+	if imageURL != "" {
+		feedPayload["image_url"] = imageURL
+	}
+	feedData, _ := json.Marshal(feedPayload)
 	rawData := json.RawMessage(feedData)
 
-	// Insert feed event
 	refID := ci.ID
 	_ = s.feed.Insert(ctx, &domain.FeedEvent{
 		ID:          uuid.New(),
@@ -134,7 +166,6 @@ func (s *CheckInService) CheckIn(ctx context.Context, userID, challengeID uuid.U
 		Data:        &rawData,
 	})
 
-	// Check and award badges
 	if s.badgeSvc != nil {
 		go s.badgeSvc.CheckAndAward(context.Background(), userID, challengeID)
 	}
@@ -142,22 +173,41 @@ func (s *CheckInService) CheckIn(ctx context.Context, userID, challengeID uuid.U
 	return ci, nil
 }
 
-// Undo removes today's check-in.
 func (s *CheckInService) Undo(ctx context.Context, userID, challengeID uuid.UUID) error {
-	today := time.Now().UTC().Truncate(24 * time.Hour)
-
-	exists, err := s.checkIns.ExistsForDate(ctx, challengeID, userID, today)
+	challenge, err := s.challenges.GetByID(ctx, challengeID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
 		return err
 	}
-	if !exists {
-		return ErrNotCheckedIn
+
+	now := time.Now().UTC()
+	today := now.Truncate(24 * time.Hour)
+
+	ci, err := s.checkIns.GetForDate(ctx, challengeID, userID, today)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotCheckedIn
+		}
+		return err
 	}
 
-	return s.checkIns.Delete(ctx, challengeID, userID, today)
+	if deadline, derr := deadlineTodayUTC(challenge.DeadlineTime, now); derr == nil {
+		if !now.Before(deadline) {
+			return ErrUndoNotAllowed
+		}
+	}
+
+	if err := s.checkIns.Delete(ctx, challengeID, userID, today); err != nil {
+		return err
+	}
+
+	_ = s.feed.DeleteByReference(ctx, ci.ID, "check_in")
+	return nil
 }
 
-// GetProgress returns the user's progress in a challenge.
+// возвращаем прогресс пользователя в челлендже
 func (s *CheckInService) GetProgress(ctx context.Context, userID, challengeID uuid.UUID) (*domain.Progress, error) {
 	challenge, err := s.challenges.GetByID(ctx, challengeID)
 	if err != nil {
@@ -169,7 +219,6 @@ func (s *CheckInService) GetProgress(ctx context.Context, userID, challengeID uu
 
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 
-	// Is today a working day?
 	dayIdx := (int(today.Weekday()) + 6) % 7
 	isWorking := false
 	for _, wd := range challenge.WorkingDays {
@@ -179,13 +228,11 @@ func (s *CheckInService) GetProgress(ctx context.Context, userID, challengeID uu
 		}
 	}
 
-	// Checked in today?
 	checkedInToday, err := s.checkIns.ExistsForDate(ctx, challengeID, userID, today)
 	if err != nil {
 		return nil, err
 	}
 
-	// All check-ins for streak computation
 	checkIns, err := s.checkIns.ListForUser(ctx, challengeID, userID)
 	if err != nil {
 		return nil, err
@@ -193,13 +240,11 @@ func (s *CheckInService) GetProgress(ctx context.Context, userID, challengeID uu
 
 	doneDays := len(checkIns)
 
-	// Build done date set
 	doneMap := make(map[string]bool)
 	for _, ci := range checkIns {
 		doneMap[normalizeDate(ci.Date).Format("2006-01-02")] = true
 	}
 
-	// Working days set
 	wdSet := make(map[int]bool)
 	for _, wd := range challenge.WorkingDays {
 		wdSet[int(wd)] = true
@@ -207,7 +252,6 @@ func (s *CheckInService) GetProgress(ctx context.Context, userID, challengeID uu
 
 	totalWorkingDays := countWorkingDays(challenge.StartsAt, challenge.EndsAt, challenge.WorkingDays)
 
-	// Compute streaks
 	cur, mx := computeStreaksSimple(doneMap, challenge.StartsAt, challenge.EndsAt, wdSet)
 
 	var adherence float64
@@ -226,7 +270,7 @@ func (s *CheckInService) GetProgress(ctx context.Context, userID, challengeID uu
 	}, nil
 }
 
-// ListAll returns all check-ins for a user in a challenge.
+// возвращает все отметки пользователя в челлендже
 func (s *CheckInService) ListAll(ctx context.Context, challengeID, userID uuid.UUID) ([]domain.SimpleCheckIn, error) {
 	return s.checkIns.ListForUser(ctx, challengeID, userID)
 }

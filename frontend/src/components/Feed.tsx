@@ -30,13 +30,18 @@ function FeedEventCard({ event }: { event: FeedEvent }) {
   const [showComments, setShowComments] = useState(false)
   const [newComment, setNewComment] = useState('')
   const [commentCount, setCommentCount] = useState(event.comment_count || 0)
+  const [commentError, setCommentError] = useState('')
 
   const loadComments = async () => {
     try {
       const { data } = await feedCommentApi.list(event.id)
       setComments(data || [])
       setCommentCount(data?.length || 0)
-    } catch { /* ignore */ }
+      setCommentError('')
+    } catch (err: any) {
+      console.error('Failed to load comments:', err)
+      setCommentError(err.response?.data?.error || 'Не удалось загрузить комментарии')
+    }
   }
 
   const handleAddComment = async () => {
@@ -44,25 +49,33 @@ function FeedEventCard({ event }: { event: FeedEvent }) {
     try {
       await feedCommentApi.add(event.id, newComment)
       setNewComment('')
+      setCommentError('')
       loadComments()
-    } catch { /* ignore */ }
+    } catch (err: any) {
+      console.error('Failed to add comment:', err)
+      setCommentError(err.response?.data?.error || 'Не удалось отправить комментарий')
+    }
   }
 
   const handleDeleteComment = async (commentId: string) => {
     try {
       await feedCommentApi.delete(commentId)
+      setCommentError('')
       loadComments()
-    } catch { /* ignore */ }
+    } catch (err: any) {
+      console.error('Failed to delete comment:', err)
+      setCommentError(err.response?.data?.error || 'Не удалось удалить комментарий')
+    }
   }
 
   const initial = event.user_name?.charAt(0)?.toUpperCase() || '?'
 
-  // Parse feed event data
   const checkInComment = event.data?.comment || ''
   const dayNumber = event.data?.day_number || 0
   const streak = event.data?.streak || 0
   const badgeTitle = event.data?.badge_title || ''
   const badgeIcon = event.data?.badge_icon || '🎖️'
+  const imageUrl = event.data?.image_url || ''
 
   const label = () => {
     switch (event.type) {
@@ -97,14 +110,26 @@ function FeedEventCard({ event }: { event: FeedEvent }) {
             </span>
           </div>
 
-          {/* Check-in daily report comment */}
           {event.type === 'check_in' && checkInComment && (
             <div style={{ marginTop: '0.35rem', fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
               {checkInComment}
             </div>
           )}
 
-          {/* Comment button for all events */}
+          {event.type === 'check_in' && imageUrl && (
+            <img
+              src={imageUrl}
+              alt=""
+              style={{
+                maxWidth: '100%',
+                borderRadius: '8px',
+                marginTop: '0.5rem',
+                maxHeight: '300px',
+                objectFit: 'cover',
+              }}
+            />
+          )}
+
           <div style={{ marginTop: '0.5rem' }}>
             <button
               className="btn-secondary"
@@ -118,9 +143,13 @@ function FeedEventCard({ event }: { event: FeedEvent }) {
             </button>
           </div>
 
-          {/* Comment thread */}
           {showComments && (
             <div className="feed-comments">
+              {commentError && (
+                <div style={{ fontSize: '0.78rem', color: '#e74c3c', marginBottom: '0.5rem' }}>
+                  {commentError}
+                </div>
+              )}
               {comments.map((c) => (
                 <div key={c.id} className="feed-comment">
                   <div className="avatar avatar-sm" style={{ background: getAvatarColor(c.user_name), width: '22px', height: '22px', fontSize: '0.6rem' }}>

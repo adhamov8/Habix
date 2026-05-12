@@ -17,7 +17,6 @@ func NewBadgeHandler(s *service.BadgeService) *BadgeHandler {
 	return &BadgeHandler{badgeSvc: s}
 }
 
-// ListDefinitions handles GET /badges
 // @Summary List all badge definitions
 // @Tags badges
 // @Security BearerAuth
@@ -36,7 +35,6 @@ func (h *BadgeHandler) ListDefinitions(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, list, http.StatusOK)
 }
 
-// MyBadges handles GET /users/me/badges
 // @Summary Get current user's badges
 // @Tags badges
 // @Security BearerAuth
@@ -56,7 +54,6 @@ func (h *BadgeHandler) MyBadges(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, list, http.StatusOK)
 }
 
-// UserBadges handles GET /users/{id}/badges
 // @Summary Get user's badges
 // @Tags badges
 // @Security BearerAuth

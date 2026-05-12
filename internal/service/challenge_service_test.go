@@ -10,8 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// --- helpers ---
-
 func newTestChallengeService() (*ChallengeService, *mockChallengeRepo, *mockParticipantRepo, *mockFeedRepo) {
 	cr := newMockChallengeRepo()
 	pr := newMockParticipantRepo()
@@ -22,8 +20,6 @@ func newTestChallengeService() (*ChallengeService, *mockChallengeRepo, *mockPart
 func futureDate(days int) string {
 	return time.Now().UTC().AddDate(0, 0, days).Format("2006-01-02")
 }
-
-// --- Create tests ---
 
 func TestCreate_Success(t *testing.T) {
 	svc, cr, pr, fr := newTestChallengeService()
@@ -75,8 +71,6 @@ func TestCreate_InvalidDateFormat(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid starts_at")
 }
-
-// --- Update tests ---
 
 func TestUpdate_Success(t *testing.T) {
 	svc, _, _, _ := newTestChallengeService()
@@ -147,8 +141,6 @@ func TestUpdate_NotFound(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNotFound)
 }
 
-// --- Finish tests ---
-
 func TestFinish_Success(t *testing.T) {
 	svc, cr, _, _ := newTestChallengeService()
 	creatorID := uuid.New()
@@ -187,8 +179,6 @@ func TestFinish_NotFound(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNotFound)
 }
 
-// --- GetByID tests ---
-
 func TestGetByID_Success(t *testing.T) {
 	svc, _, _, _ := newTestChallengeService()
 
@@ -210,8 +200,6 @@ func TestGetByID_NotFound(t *testing.T) {
 	_, err := svc.GetByID(context.Background(), uuid.New())
 	assert.ErrorIs(t, err, ErrNotFound)
 }
-
-// --- JoinPublic tests ---
 
 func TestJoinPublic_Success(t *testing.T) {
 	svc, _, pr, fr := newTestChallengeService()
@@ -288,8 +276,6 @@ func TestJoinPublic_Finished(t *testing.T) {
 	assert.ErrorIs(t, err, ErrChallengeEnded)
 }
 
-// --- JoinByInviteToken tests ---
-
 func TestJoinByInviteToken_Success(t *testing.T) {
 	svc, _, pr, _ := newTestChallengeService()
 
@@ -316,8 +302,6 @@ func TestJoinByInviteToken_InvalidToken(t *testing.T) {
 	_, err := svc.JoinByInviteToken(context.Background(), uuid.New(), uuid.New())
 	assert.ErrorIs(t, err, ErrNotFound)
 }
-
-// --- RemoveParticipant tests ---
 
 func TestRemoveParticipant_Success(t *testing.T) {
 	svc, _, pr, _ := newTestChallengeService()
@@ -373,8 +357,6 @@ func TestRemoveParticipant_Forbidden(t *testing.T) {
 	assert.ErrorIs(t, err, ErrForbidden)
 }
 
-// --- GetInviteLink tests ---
-
 func TestGetInviteLink_Creator(t *testing.T) {
 	svc, _, _, _ := newTestChallengeService()
 	creatorID := uuid.New()
@@ -426,8 +408,6 @@ func TestGetInviteLink_Forbidden(t *testing.T) {
 	_, err = svc.GetInviteLink(context.Background(), challenge.ID, uuid.New())
 	assert.ErrorIs(t, err, ErrForbidden)
 }
-
-// --- ListPublic tests ---
 
 func TestListPublic_ClampsLimitAndOffset(t *testing.T) {
 	svc, _, _, _ := newTestChallengeService()

@@ -27,8 +27,8 @@ export default function Leaderboard({ challengeId }: { challengeId: string }) {
             <th>Выполнено</th>
             <th>Всего</th>
             <th>%</th>
-            <th>🔥</th>
-            <th>⭐</th>
+            <th>Серия</th>
+            <th>Макс. серия</th>
           </tr>
         </thead>
         <tbody>

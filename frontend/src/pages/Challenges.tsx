@@ -3,20 +3,16 @@ import { Link } from 'react-router-dom'
 import { challengeApi, Challenge, Category } from '../api/challenges'
 import { formatDateShort } from '../utils/dates'
 
-const CATEGORY_RU: Record<string, string> = {
-  'Sport': 'Спорт',
-  'Study': 'Учёба',
-  'Health': 'Здоровье',
-  'Finance': 'Финансы',
-  'Other': 'Другое',
-}
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  'Sport': '🏃',
-  'Study': '📚',
-  'Health': '💚',
-  'Finance': '💰',
-  'Other': '🎯',
+const CATEGORY_EMOJI: Record<number, string> = {
+  1: '🏃',
+  2: '💊',
+  3: '📚',
+  4: '💼',
+  5: '🎨',
+  6: '💰',
+  7: '🧘',
+  8: '🚭',
+  9: '🎯',
 }
 
 export default function Challenges() {
@@ -60,7 +56,7 @@ export default function Challenges() {
               className={`pill ${category === c.id ? 'active' : ''}`}
               onClick={() => { setCategory(category === c.id ? undefined : c.id); setPage(1) }}
             >
-              {CATEGORY_EMOJI[c.name] || '🎯'} {CATEGORY_RU[c.name] || c.name}
+              {CATEGORY_EMOJI[c.id] || '🎯'} {c.name}
             </button>
           ))}
         </div>

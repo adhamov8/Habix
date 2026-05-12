@@ -2,6 +2,7 @@ import { useState, useEffect, FormEvent } from 'react'
 import { useAuth } from '../store/auth'
 import { userApi, PersonalStats } from '../api/users'
 import { badgeApi, BadgeDefinition, UserBadge } from '../api/challenges'
+import BadgeCard from '../components/BadgeCard'
 
 function getAvatarColor(name: string): string {
   const colors = ['#6C5CE7', '#e17055', '#00b894', '#0984e3', '#e84393', '#fdcb6e']
@@ -46,8 +47,7 @@ export default function Profile() {
 
   return (
     <div className="animate-in" style={{ maxWidth: 600, margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+<div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <div className="avatar avatar-lg" style={{ background: getAvatarColor(user?.name || ''), margin: '0 auto 1rem' }}>
           {initial}
         </div>
@@ -60,60 +60,40 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Stats */}
       {stats && (
         <div className="grid-4" style={{ marginBottom: '1.5rem' }}>
           <div className="stat-card stat-card-purple" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Челленджи</div>
-            <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{stats.active_challenges}/{stats.total_challenges}</div>
-          </div>
-          <div className="stat-card stat-card-green" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Средний прогресс</div>
-            <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{stats.avg_adherence_pct}%</div>
-          </div>
-          <div className="stat-card stat-card-orange" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Лучшая серия</div>
-            <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>🔥 {stats.max_streak}</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Участвую</div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{stats.active_challenges}</div>
           </div>
           <div className="stat-card stat-card-blue" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Завершено</div>
             <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{stats.finished_challenges}</div>
           </div>
+          <div className="stat-card stat-card-green" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Среднее выполнение</div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{stats.avg_adherence_pct}%</div>
+          </div>
+          <div className="stat-card stat-card-orange" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Лучшая серия</div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{stats.max_streak}</div>
+          </div>
         </div>
       )}
 
-      {/* Badges */}
       {allBadges.length > 0 && (
         <>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>🎖️ Достижения</h2>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>Достижения</h2>
           <div className="badge-grid" style={{ marginBottom: '2rem' }}>
-            {allBadges.map((bd) => {
-              const earned = userBadges.find(ub => ub.code === bd.code)
-              return (
-                <div key={bd.id} className={`badge-card ${!earned ? 'badge-card-locked' : ''}`}>
-                  <div className="badge-tooltip">{bd.description}</div>
-                  <div className="badge-icon">{bd.icon}</div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>{bd.title}</div>
-                  {earned ? (
-                    <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>
-                      {new Date(earned.earned_at).toLocaleDateString('ru-RU')}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>
-                      {bd.description}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+            {allBadges.map((bd) => (
+              <BadgeCard key={bd.id} definition={bd} earned={userBadges.find(ub => ub.code === bd.code)} />
+            ))}
           </div>
         </>
       )}
 
-      {/* Divider */}
       <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '1.5rem 0' }} />
 
-      {/* Edit form */}
       <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Редактировать профиль</h2>
       <form onSubmit={handleSubmit}>
         <div className="form-group">

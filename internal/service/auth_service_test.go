@@ -41,10 +41,10 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 	tokens := newMockTokenRepo()
 	svc := newTestAuthService(users, tokens)
 
-	_, err := svc.Register(context.Background(), "alice@test.com", "pass1", "Alice")
+	_, err := svc.Register(context.Background(), "alice@test.com", "password123", "Alice")
 	require.NoError(t, err)
 
-	_, err = svc.Register(context.Background(), "alice@test.com", "pass2", "Alice2")
+	_, err = svc.Register(context.Background(), "alice@test.com", "password456", "Alice2")
 	assert.ErrorIs(t, err, ErrEmailTaken)
 }
 
@@ -55,10 +55,10 @@ func TestLogin_Success(t *testing.T) {
 	tokens := newMockTokenRepo()
 	svc := newTestAuthService(users, tokens)
 
-	_, err := svc.Register(context.Background(), "bob@test.com", "secret", "Bob")
+	_, err := svc.Register(context.Background(), "bob@test.com", "secret1234", "Bob")
 	require.NoError(t, err)
 
-	pair, err := svc.Login(context.Background(), "bob@test.com", "secret")
+	pair, err := svc.Login(context.Background(), "bob@test.com", "secret1234")
 	require.NoError(t, err)
 	assert.NotEmpty(t, pair.AccessToken)
 	assert.NotEmpty(t, pair.RefreshToken)
@@ -69,7 +69,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 	tokens := newMockTokenRepo()
 	svc := newTestAuthService(users, tokens)
 
-	_, err := svc.Register(context.Background(), "bob@test.com", "secret", "Bob")
+	_, err := svc.Register(context.Background(), "bob@test.com", "secret1234", "Bob")
 	require.NoError(t, err)
 
 	_, err = svc.Login(context.Background(), "bob@test.com", "wrong")
@@ -92,7 +92,7 @@ func TestParseAccessToken_Valid(t *testing.T) {
 	tokens := newMockTokenRepo()
 	svc := newTestAuthService(users, tokens)
 
-	pair, err := svc.Register(context.Background(), "eve@test.com", "pass", "Eve")
+	pair, err := svc.Register(context.Background(), "eve@test.com", "password1", "Eve")
 	require.NoError(t, err)
 
 	userID, err := svc.ParseAccessToken(pair.AccessToken)
@@ -113,7 +113,7 @@ func TestParseAccessToken_WrongSecret(t *testing.T) {
 	svc1 := NewAuthService(users, tokens, "secret-1")
 	svc2 := NewAuthService(users, tokens, "secret-2")
 
-	pair, err := svc1.Register(context.Background(), "eve@test.com", "pass", "Eve")
+	pair, err := svc1.Register(context.Background(), "eve@test.com", "password1", "Eve")
 	require.NoError(t, err)
 
 	_, err = svc2.ParseAccessToken(pair.AccessToken)
@@ -127,7 +127,7 @@ func TestRefresh_Success(t *testing.T) {
 	tokens := newMockTokenRepo()
 	svc := newTestAuthService(users, tokens)
 
-	pair, err := svc.Register(context.Background(), "carol@test.com", "pass", "Carol")
+	pair, err := svc.Register(context.Background(), "carol@test.com", "password1", "Carol")
 	require.NoError(t, err)
 
 	newPair, err := svc.Refresh(context.Background(), pair.RefreshToken)
@@ -151,7 +151,7 @@ func TestLogout_DeletesToken(t *testing.T) {
 	tokens := newMockTokenRepo()
 	svc := newTestAuthService(users, tokens)
 
-	pair, err := svc.Register(context.Background(), "dan@test.com", "pass", "Dan")
+	pair, err := svc.Register(context.Background(), "dan@test.com", "password1", "Dan")
 	require.NoError(t, err)
 	assert.Len(t, tokens.tokens, 1)
 

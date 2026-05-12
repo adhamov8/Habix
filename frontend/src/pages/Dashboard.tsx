@@ -11,10 +11,15 @@ const STATUS_RU: Record<string, string> = {
 }
 
 const CATEGORY_COLORS: Record<number, string> = {
-  1: 'cat-border-sport',
-  2: 'cat-border-study',
-  3: 'cat-border-health',
-  4: 'cat-border-finance',
+  1: 'cat-border-sport',     // Спорт и активность
+  2: 'cat-border-health',    // Здоровье и питание
+  3: 'cat-border-study',     // Учёба и саморазвитие
+  4: 'cat-border-finance',   // Профессиональные навыки
+  5: 'cat-border-study',     // Творчество
+  6: 'cat-border-finance',   // Финансы
+  7: 'cat-border-health',    // Ментальное здоровье
+  8: 'cat-border-other',     // Отказ от вредных привычек
+  9: 'cat-border-other',     // Другое
 }
 
 function getCatClass(catId: number) {
@@ -46,9 +51,12 @@ function MiniProgressBar({ value, max }: { value: number; max: number }) {
 function ActiveChallengeCard({ challenge }: { challenge: Challenge }) {
   const [progress, setProgress] = useState<Progress | null>(null)
   const [acting, setActing] = useState(false)
+  const [checkInError, setCheckInError] = useState('')
 
   useEffect(() => {
-    challengeApi.getProgress(challenge.id).then(({ data }) => setProgress(data)).catch(() => {})
+    challengeApi.getProgress(challenge.id).then(({ data }) => setProgress(data)).catch((err) => {
+      console.error(`Failed to load progress for challenge ${challenge.id}:`, err)
+    })
   }, [challenge.id])
 
   const handleQuickCheckIn = async (e: React.MouseEvent) => {
@@ -56,11 +64,15 @@ function ActiveChallengeCard({ challenge }: { challenge: Challenge }) {
     e.stopPropagation()
     if (!progress || progress.checked_in_today || !progress.is_working_day) return
     setActing(true)
+    setCheckInError('')
     try {
       await challengeApi.checkIn(challenge.id)
       const { data } = await challengeApi.getProgress(challenge.id)
       setProgress(data)
-    } catch { /* ignore */ }
+    } catch (err: any) {
+      console.error('Quick check-in failed:', err)
+      setCheckInError(err.response?.data?.error || 'Не удалось отметиться')
+    }
     finally { setActing(false) }
   }
 
@@ -86,9 +98,16 @@ function ActiveChallengeCard({ challenge }: { challenge: Challenge }) {
                   ✓ Выполнено
                 </div>
               ) : progress.is_working_day ? (
-                <button onClick={handleQuickCheckIn} disabled={acting} className="checkin-btn checkin-btn-done" style={{ padding: '0.4rem', fontSize: '0.8rem' }}>
-                  {acting ? '...' : '✓ Отметиться'}
-                </button>
+                <>
+                  <button onClick={handleQuickCheckIn} disabled={acting} className="checkin-btn checkin-btn-done" style={{ padding: '0.4rem', fontSize: '0.8rem' }}>
+                    {acting ? '...' : '✓ Отметиться'}
+                  </button>
+                  {checkInError && (
+                    <div style={{ fontSize: '0.72rem', color: '#e74c3c', marginTop: '0.3rem', textAlign: 'center' }}>
+                      {checkInError}
+                    </div>
+                  )}
+                </>
               ) : (
                 <div style={{ textAlign: 'center', padding: '0.4rem', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
                   Выходной
@@ -156,7 +175,9 @@ export default function Dashboard() {
     userApi.getMyStats().then(({ data }) => setStats(data))
     badgeApi.myBadges().then(({ data }) => {
       if (data && data.length > 0) setLastBadge(data[0])
-    }).catch(() => {})
+    }).catch((err) => {
+      console.error('Failed to load badges:', err)
+    })
   }, [])
 
   const active = challenges.filter((c) => c.status === 'active')
@@ -189,7 +210,7 @@ export default function Dashboard() {
           </div>
           <div className="stat-card stat-card-green">
             <div style={{ fontSize: '1.2rem', marginBottom: '0.25rem' }}>📈</div>
-            <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem', fontWeight: 500 }}>Средний прогресс</div>
+            <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem', fontWeight: 500 }}>Среднее выполнение</div>
             <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{stats.avg_adherence_pct}%</div>
           </div>
           <div className="stat-card stat-card-orange">

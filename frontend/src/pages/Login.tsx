@@ -28,8 +28,11 @@ export default function Login() {
           localStorage.setItem('toast_message', 'Вы успешно вступили в челлендж!')
           navigate(`/challenges/${challengeId}`)
           return
-        } catch {
-          // Invite failed, go home
+        } catch (err) {
+          console.error('Failed to auto-join challenge after login:', err)
+          setError('Не удалось автоматически вступить в челлендж. Откройте ссылку ещё раз.')
+          setJoining(false)
+          return
         }
       }
       navigate('/')

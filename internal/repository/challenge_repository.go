@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	"tracker/internal/domain"
+
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"tracker/internal/domain"
 )
 
 type ChallengeRepository struct {
@@ -68,7 +69,7 @@ func (r *ChallengeRepository) SetStatus(ctx context.Context, id uuid.UUID, statu
 	return err
 }
 
-// ActivateUpcoming sets status='active' for upcoming challenges whose starts_at <= today.
+// переводим будущие челленджи в статус 'active', если их дата старта уже наступила
 func (r *ChallengeRepository) ActivateUpcoming(ctx context.Context) (int64, error) {
 	res, err := r.db.ExecContext(ctx, `
 		UPDATE challenges SET status = 'active'
@@ -79,25 +80,36 @@ func (r *ChallengeRepository) ActivateUpcoming(ctx context.Context) (int64, erro
 	return res.RowsAffected()
 }
 
-// FinishExpired sets status='finished' for active challenges whose ends_at < today.
-func (r *ChallengeRepository) FinishExpired(ctx context.Context) (int64, error) {
-	res, err := r.db.ExecContext(ctx, `
+// завершаем активные челленджи, у которых дата окончания уже прошла,
+// и возвращает ID челленджей, которые перешли в статус 'finished'
+func (r *ChallengeRepository) FinishExpired(ctx context.Context) ([]uuid.UUID, error) {
+	rows, err := r.db.QueryContext(ctx, `
 		UPDATE challenges SET status = 'finished'
-		WHERE status = 'active' AND ends_at < CURRENT_DATE`)
+		WHERE status = 'active' AND ends_at < CURRENT_DATE
+		RETURNING id`)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return res.RowsAffected()
+	defer rows.Close()
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
-// CountActive returns the number of challenges with status 'active'.
+// возвращаем количество челленджей со статусом 'active'
 func (r *ChallengeRepository) CountActive(ctx context.Context) (int, error) {
 	var count int
 	err := r.db.GetContext(ctx, &count, "SELECT COUNT(*) FROM challenges WHERE status = 'active'")
 	return count, err
 }
 
-// ListForUser returns challenges the user created or participates in.
+// возвращаем челленджи, которые пользователь создал или в которых участвует
 func (r *ChallengeRepository) ListForUser(ctx context.Context, userID uuid.UUID) ([]domain.Challenge, error) {
 	var list []domain.Challenge
 	err := r.db.SelectContext(ctx, &list, `
@@ -108,7 +120,7 @@ func (r *ChallengeRepository) ListForUser(ctx context.Context, userID uuid.UUID)
 	return list, err
 }
 
-// ListPublic returns public challenges with optional filters.
+// возвращаем публичные челленджи. Фильтры по категории и поиску — необязательные
 func (r *ChallengeRepository) ListPublic(ctx context.Context, categoryID *int, search string, limit, offset int) ([]domain.Challenge, error) {
 	var (
 		clauses []string

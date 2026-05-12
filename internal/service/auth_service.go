@@ -8,7 +8,10 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"regexp"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -21,7 +24,30 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrInvalidToken       = errors.New("invalid or expired token")
 	ErrEmailTaken         = errors.New("email already in use")
+	ErrInvalidPassword    = errors.New("пароль должен содержать минимум 8 символов, включая хотя бы одну букву и одну цифру")
+	ErrInvalidEmail       = errors.New("некорректный формат email адреса")
 )
+
+var emailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]{2,}$`)
+
+func validatePassword(password string) error {
+	if utf8.RuneCountInString(password) < 8 {
+		return ErrInvalidPassword
+	}
+	hasLetter, hasDigit := false, false
+	for _, r := range password {
+		switch {
+		case unicode.IsLetter(r):
+			hasLetter = true
+		case unicode.IsDigit(r):
+			hasDigit = true
+		}
+	}
+	if !hasLetter || !hasDigit {
+		return ErrInvalidPassword
+	}
+	return nil
+}
 
 type AuthService struct {
 	users     UserRepo
@@ -38,6 +64,13 @@ func NewAuthService(users UserRepo, tokens TokenRepo, jwtSecret string) *AuthSer
 }
 
 func (s *AuthService) Register(ctx context.Context, email, password, name string) (domain.TokenPair, error) {
+	if !emailRegex.MatchString(email) {
+		return domain.TokenPair{}, ErrInvalidEmail
+	}
+	if err := validatePassword(password); err != nil {
+		return domain.TokenPair{}, err
+	}
+
 	existing, err := s.users.GetByEmail(ctx, email)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return domain.TokenPair{}, err

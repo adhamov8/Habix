@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/google/uuid"
 	"tracker/internal/domain"
+
+	"github.com/google/uuid"
 )
 
 type BadgeService struct {
@@ -32,14 +33,13 @@ func (s *BadgeService) SetNotificationService(ns *NotificationService) {
 	s.notifSvc = ns
 }
 
-// CheckAndAward checks all badge conditions after a check-in and awards earned badges.
+// проверяем условия значков после отметки и выдаёт те, которые заслужил пользователь
 func (s *BadgeService) CheckAndAward(ctx context.Context, userID, challengeID uuid.UUID) {
 	challenge, err := s.challenges.GetByID(ctx, challengeID)
 	if err != nil {
 		return
 	}
 
-	// Get user check-ins for this challenge
 	checkIns, err := s.checkIns.ListForUser(ctx, challengeID, userID)
 	if err != nil {
 		return
@@ -47,7 +47,6 @@ func (s *BadgeService) CheckAndAward(ctx context.Context, userID, challengeID uu
 
 	doneDays := len(checkIns)
 
-	// Build done date set and compute streaks
 	doneMap := make(map[string]bool)
 	for _, ci := range checkIns {
 		doneMap[normalizeDate(ci.Date).Format("2006-01-02")] = true
@@ -60,12 +59,10 @@ func (s *BadgeService) CheckAndAward(ctx context.Context, userID, challengeID uu
 
 	currentStreak, _ := computeStreaksSimple(doneMap, challenge.StartsAt, challenge.EndsAt, wdSet)
 
-	// 1. First check-in
 	if doneDays == 1 {
 		s.awardBadge(ctx, userID, "first_checkin", &challengeID)
 	}
 
-	// 2. Streak badges
 	if currentStreak >= 3 {
 		s.awardBadge(ctx, userID, "streak_3", &challengeID)
 	}
@@ -76,12 +73,11 @@ func (s *BadgeService) CheckAndAward(ctx context.Context, userID, challengeID uu
 		s.awardBadge(ctx, userID, "streak_30", &challengeID)
 	}
 
-	// 3. Perfect week — check if all working days in the current calendar week are done
 	if s.isPerfectWeek(doneMap, wdSet) {
 		s.awardBadge(ctx, userID, "perfect_week", &challengeID)
 	}
 
-	// 4. Challenge complete — 100% adherence on a finished challenge
+	// На завершённом челлендже выдаём значок только при 100% выполнении
 	if challenge.Status == "finished" {
 		totalWorkingDays := countWorkingDays(challenge.StartsAt, challenge.EndsAt, challenge.WorkingDays)
 		if totalWorkingDays > 0 && doneDays >= totalWorkingDays {
@@ -89,7 +85,6 @@ func (s *BadgeService) CheckAndAward(ctx context.Context, userID, challengeID uu
 		}
 	}
 
-	// 5. Join 3 challenges
 	count, err := s.badges.CountUserChallenges(ctx, userID)
 	if err == nil && count >= 3 {
 		s.awardBadge(ctx, userID, "join_3_challenges", nil)
@@ -102,13 +97,12 @@ func (s *BadgeService) awardBadge(ctx context.Context, userID uuid.UUID, code st
 		return
 	}
 
-	// Get badge definition for title/icon
 	bd, err := s.badges.GetDefinitionByCode(ctx, code)
 	if err != nil || bd == nil {
 		return
 	}
 
-	// Insert feed event if challenge-specific
+	// Событие в ленту пишем только если значок привязан к конкретному челленджу
 	if challengeID != nil {
 		feedData, _ := json.Marshal(map[string]any{
 			"badge_title": bd.Title,
@@ -125,7 +119,6 @@ func (s *BadgeService) awardBadge(ctx context.Context, userID uuid.UUID, code st
 		})
 	}
 
-	// Send notification
 	if s.notifSvc != nil {
 		_ = s.notifSvc.Notify(ctx, userID, "badge_earned",
 			bd.Icon+" Новое достижение!",
@@ -135,17 +128,17 @@ func (s *BadgeService) awardBadge(ctx context.Context, userID uuid.UUID, code st
 	}
 }
 
-// isPerfectWeek checks if all working days in the current ISO week are checked in.
+// проверяем, отмечены ли все рабочие дни текущей недели
 func (s *BadgeService) isPerfectWeek(doneMap map[string]bool, wdSet map[int]bool) bool {
 	today := time.Now().UTC().Truncate(24 * time.Hour)
-	// Find Monday of this week
+	// Находим понедельник текущей недели
 	daysSinceMonday := (int(today.Weekday()) + 6) % 7
 	monday := today.AddDate(0, 0, -daysSinceMonday)
 
 	for i := 0; i < 7; i++ {
 		d := monday.AddDate(0, 0, i)
 		if d.After(today) {
-			break // Can't check future days
+			break // Будущие дни пропускаем
 		}
 		dayIdx := (int(d.Weekday()) + 6) % 7
 		if wdSet[dayIdx] {
@@ -155,6 +148,48 @@ func (s *BadgeService) isPerfectWeek(doneMap map[string]bool, wdSet map[int]bool
 		}
 	}
 	return true
+}
+
+// выдаём значки за завершение и значок «Ветеран»
+// одному участнику после окончания челленджа
+func (s *BadgeService) CheckAndAwardOnFinish(ctx context.Context, userID, challengeID uuid.UUID, adherencePct float64) {
+	if adherencePct >= 50 {
+		s.awardBadge(ctx, userID, "complete_50", &challengeID)
+	}
+	if adherencePct >= 80 {
+		s.awardBadge(ctx, userID, "complete_80", &challengeID)
+	}
+	if adherencePct >= 100 {
+		s.awardBadge(ctx, userID, "challenge_complete", &challengeID)
+	}
+	if finished, err := s.badges.CountFinishedChallengesForUser(ctx, userID); err == nil && finished >= 5 {
+		s.awardBadge(ctx, userID, "veteran", nil)
+	}
+}
+
+// считаем выполнение каждого участника
+// только что завершённого челленджа и выдаёт нужные значки
+func (s *BadgeService) ProcessFinishedChallenge(ctx context.Context, challengeID uuid.UUID) {
+	challenge, err := s.challenges.GetByID(ctx, challengeID)
+	if err != nil {
+		return
+	}
+	totalWorkingDays := countWorkingDays(challenge.StartsAt, challenge.EndsAt, challenge.WorkingDays)
+	if totalWorkingDays <= 0 {
+		return
+	}
+	participants, err := s.participants.ListByChallenge(ctx, challengeID)
+	if err != nil {
+		return
+	}
+	for _, p := range participants {
+		checkIns, err := s.checkIns.ListForUser(ctx, challengeID, p.UserID)
+		if err != nil {
+			continue
+		}
+		adherence := float64(len(checkIns)) / float64(totalWorkingDays) * 100
+		s.CheckAndAwardOnFinish(ctx, p.UserID, challengeID, adherence)
+	}
 }
 
 func (s *BadgeService) GetUserBadges(ctx context.Context, userID uuid.UUID) ([]domain.UserBadge, error) {

@@ -4,9 +4,10 @@ import (
 	"context"
 	"time"
 
+	"tracker/internal/domain"
+
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"tracker/internal/domain"
 )
 
 type StatsRepository struct {
@@ -23,7 +24,7 @@ type participantCounts struct {
 	DoneDays int       `db:"done_days"`
 }
 
-// GetParticipantCounts returns done days per participant using new checkins table.
+// возвращаем число выполненных дней по каждому участнику (из таблицы checkins)
 func (r *StatsRepository) GetParticipantCounts(ctx context.Context, challengeID uuid.UUID) ([]participantCounts, error) {
 	var list []participantCounts
 	err := r.db.SelectContext(ctx, &list, `
@@ -44,7 +45,7 @@ type userCheckIn struct {
 	Date   time.Time `db:"date"`
 }
 
-// GetCheckInsForChallenge returns all check-ins ordered by user and date.
+// возвращаем все отметки челленджа, отсортированные по пользователю и дате
 func (r *StatsRepository) GetCheckInsForChallenge(ctx context.Context, challengeID uuid.UUID) ([]userCheckIn, error) {
 	var list []userCheckIn
 	err := r.db.SelectContext(ctx, &list, `
@@ -61,7 +62,7 @@ type userChallengeStats struct {
 	TotalDays   int       `db:"total_days"`
 }
 
-// GetUserChallengeStats returns per-challenge stats for a user.
+// возвращаем статистику пользователя по каждому челленджу.
 func (r *StatsRepository) GetUserChallengeStats(ctx context.Context, userID uuid.UUID) ([]userChallengeStats, error) {
 	var list []userChallengeStats
 	err := r.db.SelectContext(ctx, &list, `
@@ -78,7 +79,7 @@ func (r *StatsRepository) GetUserChallengeStats(ctx context.Context, userID uuid
 	return list, err
 }
 
-// GetUserAllCheckIns returns all check-ins for a user across all challenges.
+// возвращаем все отметки пользователя по всем челленджам
 func (r *StatsRepository) GetUserAllCheckIns(ctx context.Context, userID uuid.UUID) ([]userCheckIn, error) {
 	var list []userCheckIn
 	err := r.db.SelectContext(ctx, &list, `
@@ -88,7 +89,7 @@ func (r *StatsRepository) GetUserAllCheckIns(ctx context.Context, userID uuid.UU
 	return list, err
 }
 
-// GetParticipationByDay returns daily participation counts.
+// возвращаем количество отметок по дням
 func (r *StatsRepository) GetParticipationByDay(ctx context.Context, challengeID uuid.UUID) ([]domain.DayParticipation, error) {
 	var list []domain.DayParticipation
 	err := r.db.SelectContext(ctx, &list, `

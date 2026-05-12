@@ -23,7 +23,7 @@ func NewAuthHandler(authSvc *service.AuthService) *AuthHandler {
 // Register godoc
 // @Summary Register a new user
 // @Tags auth
-// @Param body body object true "Registration data"
+// @Param body object true "Registration data"
 // @Success 201 {object} domain.TokenPair
 // @Failure 409 {object} map[string]string
 // @Router /auth/register [post]
@@ -38,7 +38,6 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validation
 	if !emailRegex.MatchString(req.Email) {
 		jsonError(w, "Некорректный формат email", http.StatusBadRequest)
 		return
@@ -56,6 +55,10 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, service.ErrEmailTaken) {
 			jsonError(w, "Пользователь с таким email уже существует", http.StatusConflict)
+			return
+		}
+		if errors.Is(err, service.ErrInvalidPassword) {
+			jsonError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		jsonError(w, "internal server error", http.StatusInternalServerError)

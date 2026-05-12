@@ -3,9 +3,10 @@ package repository
 import (
 	"context"
 
+	"tracker/internal/domain"
+
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"tracker/internal/domain"
 )
 
 type FeedRepository struct {
@@ -21,6 +22,15 @@ func (r *FeedRepository) Insert(ctx context.Context, e *domain.FeedEvent) error 
 		INSERT INTO feed_events (id, challenge_id, user_id, type, reference_id, data)
 		VALUES ($1, $2, $3, $4, $5, $6)`,
 		e.ID, e.ChallengeID, e.UserID, e.Type, e.ReferenceID, e.Data)
+	return err
+}
+
+// удаляем события ленты, связанные с указанным reference_id и типом
+func (r *FeedRepository) DeleteByReference(ctx context.Context, refID uuid.UUID, eventType string) error {
+	_, err := r.db.ExecContext(ctx, `
+		DELETE FROM feed_events
+		WHERE reference_id = $1 AND type = $2`,
+		refID, eventType)
 	return err
 }
 

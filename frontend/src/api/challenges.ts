@@ -58,7 +58,7 @@ export interface FeedEvent {
   user_id: string
   type: string
   reference_id: string | null
-  data: { comment?: string; day_number?: number; streak?: number; badge_title?: string; badge_icon?: string; badge_code?: string } | null
+  data: { comment?: string; day_number?: number; streak?: number; badge_title?: string; badge_icon?: string; badge_code?: string; image_url?: string } | null
   created_at: string
   user_name: string
   comment_count: number
@@ -70,6 +70,7 @@ export interface SimpleCheckIn {
   user_id: string
   date: string
   comment: string
+  image_url: string | null
   created_at: string
 }
 
@@ -114,8 +115,8 @@ export const challengeApi = {
   getFeed: (id: string, page = 1) =>
     api.get<FeedEvent[]>(`/challenges/${id}/feed`, { params: { page } }),
 
-  // New check-in endpoints
-  checkIn: (id: string, comment = '') => api.post<SimpleCheckIn>(`/challenges/${id}/checkin`, { comment }),
+  checkIn: (id: string, comment = '', imageUrl = '') =>
+    api.post<SimpleCheckIn>(`/challenges/${id}/checkin`, { comment, image_url: imageUrl }),
   undoCheckIn: (id: string) => api.delete(`/challenges/${id}/checkin`),
   getProgress: (id: string) => api.get<Progress>(`/challenges/${id}/progress`),
   getAllCheckIns: (id: string) => api.get<SimpleCheckIn[]>(`/challenges/${id}/checkins`),

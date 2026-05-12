@@ -19,7 +19,6 @@ func NewFeedCommentHandler(repo *repository.FeedCommentRepository) *FeedCommentH
 	return &FeedCommentHandler{repo: repo}
 }
 
-// AddComment handles POST /feed/{eventId}/comments
 func (h *FeedCommentHandler) AddComment(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	eventID, err := uuid.Parse(chi.URLParam(r, "eventId"))
@@ -50,7 +49,6 @@ func (h *FeedCommentHandler) AddComment(w http.ResponseWriter, r *http.Request) 
 	jsonResponse(w, fc, http.StatusCreated)
 }
 
-// ListComments handles GET /feed/{eventId}/comments
 func (h *FeedCommentHandler) ListComments(w http.ResponseWriter, r *http.Request) {
 	eventID, err := uuid.Parse(chi.URLParam(r, "eventId"))
 	if err != nil {
@@ -69,7 +67,6 @@ func (h *FeedCommentHandler) ListComments(w http.ResponseWriter, r *http.Request
 	jsonResponse(w, list, http.StatusOK)
 }
 
-// DeleteComment handles DELETE /feed/comments/{id}
 func (h *FeedCommentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	commentID, err := uuid.Parse(chi.URLParam(r, "id"))

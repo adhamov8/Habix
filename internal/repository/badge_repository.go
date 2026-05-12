@@ -3,9 +3,10 @@ package repository
 import (
 	"context"
 
+	"tracker/internal/domain"
+
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"tracker/internal/domain"
 )
 
 type BadgeRepository struct {
@@ -31,8 +32,8 @@ func (r *BadgeRepository) GetDefinitionByCode(ctx context.Context, code string) 
 	return &bd, nil
 }
 
-// Award gives a badge to a user. Uses ON CONFLICT DO NOTHING to prevent duplicates.
-// Returns true if the badge was actually awarded (not a duplicate).
+// Award выдаёт значок пользователю. Использует ON CONFLICT DO NOTHING, чтобы не дублировать значки.
+// Возвращает true, если значок реально был выдан (а не пропущен как дубликат).
 func (r *BadgeRepository) Award(ctx context.Context, userID uuid.UUID, badgeCode string, challengeID *uuid.UUID) (bool, error) {
 	res, err := r.db.ExecContext(ctx, `
 		INSERT INTO user_badges (user_id, badge_id, challenge_id)
@@ -70,10 +71,20 @@ func (r *BadgeRepository) ListRecent(ctx context.Context, limit int) ([]domain.U
 	return list, err
 }
 
-// CountUserChallenges returns the number of challenges the user participates in.
+// возвращаем число челленджей, в которых участвует пользователь.
 func (r *BadgeRepository) CountUserChallenges(ctx context.Context, userID uuid.UUID) (int, error) {
 	var count int
 	err := r.db.GetContext(ctx, &count,
 		`SELECT COUNT(*) FROM challenge_participants WHERE user_id = $1`, userID)
+	return count, err
+}
+
+// возвращаем число завершённых челленджей пользователя.
+func (r *BadgeRepository) CountFinishedChallengesForUser(ctx context.Context, userID uuid.UUID) (int, error) {
+	var count int
+	err := r.db.GetContext(ctx, &count, `
+		SELECT COUNT(*) FROM challenge_participants p
+		JOIN challenges c ON c.id = p.challenge_id
+		WHERE p.user_id = $1 AND c.status = 'finished'`, userID)
 	return count, err
 }

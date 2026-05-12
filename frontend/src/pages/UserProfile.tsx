@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { userApi, UserProfile } from '../api/users'
 import { badgeApi, BadgeDefinition, UserBadge } from '../api/challenges'
+import BadgeCard from '../components/BadgeCard'
 
 function getAvatarColor(name: string): string {
   const colors = ['#6C5CE7', '#e17055', '#00b894', '#0984e3', '#e84393', '#fdcb6e']
@@ -53,31 +54,19 @@ export default function UserProfilePage() {
         </div>
         <div className="stat-card stat-card-orange" style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Лучшая серия</div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>🔥 {profile.stats.max_streak}</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{profile.stats.max_streak}</div>
         </div>
         <div className="stat-card stat-card-green" style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Прогресс</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Среднее выполнение</div>
           <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{profile.stats.avg_adherence_pct}%</div>
         </div>
       </div>
 
-      <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>🎖️ Достижения</h2>
+      <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>Достижения</h2>
       <div className="badge-grid">
-        {allBadges.map((bd) => {
-          const earned = userBadges.find(ub => ub.code === bd.code)
-          return (
-            <div key={bd.id} className={`badge-card ${!earned ? 'badge-card-locked' : ''}`}>
-              <div className="badge-tooltip">{bd.description}</div>
-              <div className="badge-icon">{bd.icon}</div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>{bd.title}</div>
-              {earned && (
-                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>
-                  {new Date(earned.earned_at).toLocaleDateString('ru-RU')}
-                </div>
-              )}
-            </div>
-          )
-        })}
+        {allBadges.map((bd) => (
+          <BadgeCard key={bd.id} definition={bd} earned={userBadges.find(ub => ub.code === bd.code)} />
+        ))}
       </div>
     </div>
   )

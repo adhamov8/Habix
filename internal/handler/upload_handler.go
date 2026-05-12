@@ -31,7 +31,7 @@ func UploadHandler(uploadDir string) http.HandlerFunc {
 		}
 		defer file.Close()
 
-		// Detect MIME type from first 512 bytes
+		// Узнаём тип файла по первым 512 байтам
 		buf := make([]byte, 512)
 		n, err := file.Read(buf)
 		if err != nil && err != io.EOF {
@@ -43,14 +43,14 @@ func UploadHandler(uploadDir string) http.HandlerFunc {
 			jsonError(w, fmt.Sprintf("unsupported file type: %s", mime), http.StatusBadRequest)
 			return
 		}
-		// Seek back to start
+		// Возвращаемся в начало файла
 		if seeker, ok := file.(io.Seeker); ok {
 			seeker.Seek(0, io.SeekStart)
 		}
 
 		ext := filepath.Ext(header.Filename)
 		if ext == "" {
-			// Fallback extension from MIME
+			// Если расширения нет, берём его из MIME-типа
 			switch mime {
 			case "image/jpeg":
 				ext = ".jpg"

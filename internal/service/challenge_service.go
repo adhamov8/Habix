@@ -6,9 +6,10 @@ import (
 	"errors"
 	"time"
 
+	"tracker/internal/domain"
+
 	"github.com/google/uuid"
 	"github.com/lib/pq"
-	"tracker/internal/domain"
 )
 
 var (
@@ -48,10 +49,16 @@ type ChallengeService struct {
 	challenges   ChallengeRepo
 	participants ParticipantRepo
 	feed         FeedRepo
+	badgeSvc     *BadgeService
 }
 
 func NewChallengeService(c ChallengeRepo, p ParticipantRepo, f FeedRepo) *ChallengeService {
 	return &ChallengeService{challenges: c, participants: p, feed: f}
+}
+
+// подключаем сервис значков, чтобы при завершении челленджа выдавать награды
+func (s *ChallengeService) SetBadgeService(bs *BadgeService) {
+	s.badgeSvc = bs
 }
 
 func (s *ChallengeService) Create(ctx context.Context, creatorID uuid.UUID, p CreateChallengeParams) (*domain.Challenge, error) {
@@ -99,10 +106,9 @@ func (s *ChallengeService) Create(ctx context.Context, creatorID uuid.UUID, p Cr
 		return nil, err
 	}
 
-	// Creator automatically joins as participant.
+	// Автор автоматически становится участником
 	_ = s.participants.Add(ctx, c.ID, creatorID)
 
-	// Feed event
 	_ = s.feed.Insert(ctx, &domain.FeedEvent{
 		ID:          uuid.New(),
 		ChallengeID: c.ID,
@@ -181,7 +187,13 @@ func (s *ChallengeService) Finish(ctx context.Context, challengeID, creatorID uu
 	if c.CreatorID != creatorID {
 		return ErrForbidden
 	}
-	return s.challenges.SetStatus(ctx, challengeID, "finished")
+	if err := s.challenges.SetStatus(ctx, challengeID, "finished"); err != nil {
+		return err
+	}
+	if s.badgeSvc != nil {
+		go s.badgeSvc.ProcessFinishedChallenge(context.Background(), challengeID)
+	}
+	return nil
 }
 
 func (s *ChallengeService) GetByID(ctx context.Context, id uuid.UUID) (*domain.Challenge, error) {

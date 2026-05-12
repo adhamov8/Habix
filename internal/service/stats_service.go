@@ -40,7 +40,6 @@ func (s *StatsService) Leaderboard(ctx context.Context, challengeID uuid.UUID) (
 		return nil, err
 	}
 
-	// Group check-in dates by user
 	userDoneMaps := make(map[uuid.UUID]map[string]bool)
 	for _, ci := range checkIns {
 		if userDoneMaps[ci.UserID] == nil {
@@ -117,13 +116,13 @@ func (s *StatsService) PersonalStats(ctx context.Context, userID uuid.UUID) (*do
 		ps.AvgAdherencePct = math.Round(totalAdherence/float64(adherenceCount)*100) / 100
 	}
 
-	// Compute max streak across all challenges
+	// Считаем максимальную серию по всем челленджам
 	allCheckIns, err := s.stats.GetUserAllCheckIns(ctx, userID)
 	if err != nil {
 		return ps, nil
 	}
 
-	// Simple max streak: consecutive days with check-ins
+	// Простой подсчёт: считаем подряд идущие дни с отметками
 	maxStreak := 0
 	streak := 0
 	var prevDate time.Time
@@ -212,7 +211,7 @@ func (s *StatsService) ChallengeSummary(ctx context.Context, challengeID uuid.UU
 		return nil, err
 	}
 
-	// Group check-in dates by user
+	// Группируем даты отметок по пользователям
 	userDoneMaps := make(map[uuid.UUID]map[string]bool)
 	for _, ci := range checkIns {
 		if userDoneMaps[ci.UserID] == nil {
@@ -272,7 +271,7 @@ func (s *StatsService) ChallengeSummary(ctx context.Context, challengeID uuid.UU
 		summary.AvgAdherence = math.Round(totalAdherence/float64(len(counts))*100) / 100
 	}
 
-	// Sort participants by adherence descending
+	// Сортируем участников по выполнению (от большего к меньшему)
 	sort.Slice(summary.Participants, func(i, j int) bool {
 		return summary.Participants[i].Adherence > summary.Participants[j].Adherence
 	})
@@ -280,10 +279,8 @@ func (s *StatsService) ChallengeSummary(ctx context.Context, challengeID uuid.UU
 	return summary, nil
 }
 
-// --- helpers ---
-
-// normalizeDate extracts year/month/day and returns midnight UTC,
-// regardless of the timezone lib/pq attached to a DATE column.
+// берём только год/месяц/день и возвращает полночь UTC.
+// Так мы убираем часовой пояс, который lib/pq добавляет к DATE-полю.
 func normalizeDate(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 }
@@ -311,7 +308,7 @@ func countWorkingDays(startsAt, endsAt time.Time, workingDays []int64) int {
 	return count
 }
 
-// computeStreaksSimple computes current and max streaks from a set of done dates.
+// считаем текущую и максимальную серию по набору дат отметок
 func computeStreaksSimple(doneMap map[string]bool, startsAt, endsAt time.Time, workingDaySet map[int]bool) (current, max int) {
 	start := normalizeDate(startsAt)
 	end := normalizeDate(endsAt)
@@ -320,7 +317,7 @@ func computeStreaksSimple(doneMap map[string]bool, startsAt, endsAt time.Time, w
 		end = today
 	}
 
-	// Walk working days from start to end
+	// Идём по рабочим дням от начала до конца
 	var workingDayList []time.Time
 	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
 		dayIdx := (int(d.Weekday()) + 6) % 7

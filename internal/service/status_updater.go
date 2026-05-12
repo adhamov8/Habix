@@ -11,13 +11,19 @@ import (
 
 type StatusUpdater struct {
 	challenges *repository.ChallengeRepository
+	badgeSvc   *BadgeService
 }
 
 func NewStatusUpdater(c *repository.ChallengeRepository) *StatusUpdater {
 	return &StatusUpdater{challenges: c}
 }
 
-// Start runs the status updater once immediately and then every hour.
+// подключаем выдачу значков при автоматическом завершении
+func (u *StatusUpdater) SetBadgeService(bs *BadgeService) {
+	u.badgeSvc = bs
+}
+
+// запускаем обновление статусов сразу и потом каждый час
 func (u *StatusUpdater) Start(ctx context.Context) {
 	u.run()
 	ticker := time.NewTicker(1 * time.Hour)
@@ -45,14 +51,18 @@ func (u *StatusUpdater) run() {
 		slog.Info("activated upcoming challenges", "count", activated)
 	}
 
-	finished, err := u.challenges.FinishExpired(ctx)
+	finishedIDs, err := u.challenges.FinishExpired(ctx)
 	if err != nil {
 		slog.Error("finish expired challenges", "error", err)
-	} else if finished > 0 {
-		slog.Info("finished expired challenges", "count", finished)
+	} else if len(finishedIDs) > 0 {
+		slog.Info("finished expired challenges", "count", len(finishedIDs))
+		if u.badgeSvc != nil {
+			for _, id := range finishedIDs {
+				u.badgeSvc.ProcessFinishedChallenge(ctx, id)
+			}
+		}
 	}
 
-	// Update active challenges gauge
 	if count, err := u.challenges.CountActive(ctx); err == nil {
 		metrics.ActiveChallengesTotal.Set(float64(count))
 	}

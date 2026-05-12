@@ -4,12 +4,16 @@ import { challengeApi, Category } from '../api/challenges'
 
 const DAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
-const CATEGORY_RU: Record<string, string> = {
-  'Sport': 'Спорт',
-  'Study': 'Учёба',
-  'Health': 'Здоровье',
-  'Finance': 'Финансы',
-  'Other': 'Другое',
+const CATEGORY_EMOJI: Record<number, string> = {
+  1: '🏃',
+  2: '💊',
+  3: '📚',
+  4: '💼',
+  5: '🎨',
+  6: '💰',
+  7: '🧘',
+  8: '🚭',
+  9: '🎯',
 }
 
 export default function ChallengeNew() {
@@ -40,7 +44,6 @@ export default function ChallengeNew() {
     )
   }
 
-  // Validation
   const today = new Date().toISOString().split('T')[0]
   const titleError = title.length > 0 && title.length < 3 ? 'Название должно быть от 3 символов' : ''
   const startsAtError = startsAt && startsAt < today ? 'Дата начала не может быть в прошлом' : ''
@@ -94,7 +97,7 @@ export default function ChallengeNew() {
           <select value={categoryId} onChange={(e) => setCategoryId(Number(e.target.value))}>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
-                {CATEGORY_RU[c.name] || c.name}
+                {CATEGORY_EMOJI[c.id] || '🎯'} {c.name}
               </option>
             ))}
           </select>

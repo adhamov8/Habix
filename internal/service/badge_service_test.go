@@ -5,13 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"tracker/internal/domain"
+
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
-	"tracker/internal/domain"
 )
-
-// --- Tests ---
 
 func TestCheckAndAward_FirstCheckin(t *testing.T) {
 	today := time.Now().UTC().Truncate(24 * time.Hour)

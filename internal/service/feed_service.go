@@ -3,8 +3,9 @@ package service
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"tracker/internal/domain"
+
+	"github.com/google/uuid"
 )
 
 type FeedService struct {
@@ -17,7 +18,7 @@ func NewFeedService(f FeedRepo, p ParticipantRepo) *FeedService {
 }
 
 func (s *FeedService) GetFeed(ctx context.Context, challengeID, userID uuid.UUID, limit, offset int) ([]domain.FeedEvent, error) {
-	// Verify user is a participant or creator
+	// Только участники и автор могут читать ленту
 	isParticipant, err := s.participants.Exists(ctx, challengeID, userID)
 	if err != nil {
 		return nil, err
@@ -35,7 +36,7 @@ func (s *FeedService) GetFeed(ctx context.Context, challengeID, userID uuid.UUID
 	return s.feed.ListByChallenge(ctx, challengeID, limit, offset)
 }
 
-// InsertEvent is a helper for creating feed events from other services/handlers.
+// помощник для добавления событий в ленту из других сервисов и хендлеров
 func (s *FeedService) InsertEvent(ctx context.Context, challengeID, userID uuid.UUID, eventType string, refID *uuid.UUID) {
 	_ = s.feed.Insert(ctx, &domain.FeedEvent{
 		ID:          uuid.New(),

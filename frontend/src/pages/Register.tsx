@@ -3,13 +3,16 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import { challengeApi } from '../api/challenges'
 
-const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PASSWORD_HINT = 'Минимум 8 символов, включая букву и цифру'
+
+function isValidPassword(pw: string): boolean {
+  return pw.length >= 8 && /\p{L}/u.test(pw) && /\d/.test(pw)
+}
 
 function passwordStrength(pw: string): { label: string; color: string } {
   if (pw.length < 8) return { label: 'Слишком короткий', color: '#e74c3c' }
-  const hasLetters = /[a-zA-Zа-яА-Я]/.test(pw)
-  const hasDigits = /\d/.test(pw)
-  if (hasLetters && hasDigits) return { label: 'Надёжный', color: '#27ae60' }
+  if (isValidPassword(pw)) return { label: 'Надёжный', color: '#27ae60' }
   return { label: 'Средний', color: '#f39c12' }
 }
 
@@ -28,17 +31,25 @@ export default function Register() {
   const nameError = touched.name && (name.length < 2 || name.length > 50)
     ? 'Имя должно содержать от 2 до 50 символов' : ''
   const emailError = touched.email && !emailRegex.test(email)
-    ? 'Некорректный формат email' : ''
-  const pwError = touched.password && password.length > 0 && password.length < 8
-    ? 'Минимум 8 символов' : ''
+    ? 'Введите корректный email адрес' : ''
+  const pwError = touched.password && password.length > 0 && !isValidPassword(password)
+    ? 'Пароль должен содержать минимум 8 символов, включая букву и цифру' : ''
 
   const isValid = name.length >= 2 && name.length <= 50
     && emailRegex.test(email)
-    && password.length >= 8
-    && /[a-zA-Zа-яА-Я]/.test(password) && /\d/.test(password)
+    && isValidPassword(password)
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault(); setServerError('')
+    setTouched({ name: true, email: true, password: true })
+    if (!emailRegex.test(email)) {
+      setServerError('Введите корректный email адрес')
+      return
+    }
+    if (!isValidPassword(password)) {
+      setServerError('Пароль должен содержать минимум 8 символов, включая букву и цифру')
+      return
+    }
     try {
       await register(email, password, name)
       const token = localStorage.getItem('pending_invite_token')
@@ -51,7 +62,11 @@ export default function Register() {
           localStorage.setItem('toast_message', 'Вы успешно вступили в челлендж!')
           navigate(`/challenges/${challengeId}`)
           return
-        } catch { /* ignore */ }
+        } catch (err) {
+          console.error('Failed to auto-join challenge after registration:', err)
+          setServerError('Не удалось автоматически вступить в челлендж. Откройте ссылку ещё раз.')
+          setJoining(false)
+        }
       }
       navigate('/')
     } catch (err: any) {
@@ -120,6 +135,9 @@ export default function Register() {
               onBlur={() => setTouched(t => ({ ...t, password: true }))}
               required
             />
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
+              {PASSWORD_HINT}
+            </div>
             {pwStr && (
               <div style={{ fontSize: '0.8rem', color: pwStr.color, marginTop: '0.25rem' }}>
                 {pwStr.label}

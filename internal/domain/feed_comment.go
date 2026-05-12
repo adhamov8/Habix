@@ -1,9 +1,8 @@
 package domain
 
 import (
-	"time"
-
 	"github.com/google/uuid"
+	"time"
 )
 
 type FeedComment struct {
@@ -12,6 +11,6 @@ type FeedComment struct {
 	UserID      uuid.UUID `db:"user_id"       json:"user_id"`
 	Text        string    `db:"text"          json:"text"`
 	CreatedAt   time.Time `db:"created_at"    json:"created_at"`
-	// Joined
+	// Подтягивается из таблицы users
 	UserName string `db:"user_name" json:"user_name"`
 }

@@ -158,7 +158,7 @@ export default function Stats({ challengeId, challenge }: { challengeId: string;
               <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>⭐ {progress.max_streak}</div>
             </div>
             <div className="stat-card stat-card-green" style={{ textAlign: 'center', padding: '0.75rem' }}>
-              <div style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Прогресс</div>
+              <div style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Выполнение</div>
               <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{progress.adherence_pct}%</div>
             </div>
             <div className="stat-card stat-card-blue" style={{ textAlign: 'center', padding: '0.75rem' }}>

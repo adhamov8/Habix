@@ -37,7 +37,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Configure slog
+	// Настройка slog
 	var level slog.Level
 	switch strings.ToLower(cfg.LogLevel) {
 	case "debug":
@@ -60,7 +60,7 @@ func main() {
 	defer database.Close()
 	metrics.RegisterDBStats(database)
 
-	// Run migrations
+	// Запуск миграций
 	migrationsDir := "/migrations"
 	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
 		migrationsDir = "./internal/db/migrations"
@@ -70,14 +70,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Ensure uploads directory exists
+	// Создание директории для загружаемых файлов, если она не существует
 	uploadDir := "./uploads"
 	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
 		slog.Error("failed to create uploads dir", "error", err)
 		os.Exit(1)
 	}
 
-	// Repositories
 	userRepo := repository.NewUserRepository(database)
 	tokenRepo := repository.NewTokenRepository(database)
 	categoryRepo := repository.NewCategoryRepository(database)
@@ -92,7 +91,6 @@ func main() {
 	badgeRepo := repository.NewBadgeRepository(database)
 	notifRepo := repository.NewNotificationRepository(database)
 
-	// Services
 	authSvc := service.NewAuthService(userRepo, tokenRepo, cfg.JWTSecret)
 	challengeSvc := service.NewChallengeService(challengeRepo, participantRepo, feedRepo)
 	checkInSvc := service.NewCheckInService(checkInRepo, challengeRepo, participantRepo, feedRepo)
@@ -102,15 +100,17 @@ func main() {
 	badgeSvc := service.NewBadgeService(badgeRepo, checkInRepo, challengeRepo, participantRepo, feedRepo)
 	notifSvc := service.NewNotificationService(notifRepo)
 
-	// Wire cross-service dependencies
+	// Передача межсервисных зависимостей
 	badgeSvc.SetNotificationService(notifSvc)
 	checkInSvc.SetBadgeService(badgeSvc)
+	challengeSvc.SetBadgeService(badgeSvc)
 
-	// Background jobs
+	// Запуск фоновых задач
 	statusUpdater := service.NewStatusUpdater(challengeRepo)
+	statusUpdater.SetBadgeService(badgeSvc)
 	statusUpdater.Start(context.Background())
 
-	// Handlers
+	// Инициализация хендлеров
 	authHandler := handler.NewAuthHandler(authSvc)
 	userHandler := handler.NewUserHandler(userRepo, statsSvc)
 	challengeHandler := handler.NewChallengeHandler(challengeSvc, categoryRepo)
@@ -128,10 +128,10 @@ func main() {
 	r.Use(appmiddleware.Logging(logger))
 	r.Use(chimiddleware.Recoverer)
 
-	// Prometheus metrics endpoint (no auth)
+	// Эндпоинт для сбора метрик Prometheus (без аутентификации)
 	r.Handle("/metrics", promhttp.Handler())
 
-	// Serve uploaded files
+	// Раздача загруженных файлов
 	fileServer := http.StripPrefix("/static/", http.FileServer(http.Dir(uploadDir)))
 	r.Handle("/static/*", fileServer)
 
@@ -179,7 +179,7 @@ func main() {
 			r.Get("/challenges/{id}/stats", statsHandler.ChallengeStats)
 			r.Get("/challenges/{id}/summary", statsHandler.ChallengeSummary)
 
-			// New check-in endpoints
+			// Новые эндпоинты для отметок выполнения
 			r.Post("/challenges/{id}/checkin", checkInHandler.CheckIn)
 			r.Delete("/challenges/{id}/checkin", checkInHandler.Undo)
 			r.Get("/challenges/{id}/progress", checkInHandler.GetProgress)

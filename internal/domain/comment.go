@@ -12,8 +12,8 @@ type Comment struct {
 	UserID    uuid.UUID `db:"user_id"     json:"user_id"`
 	Text      string    `db:"text"        json:"text"`
 	CreatedAt time.Time `db:"created_at"  json:"created_at"`
-	// Joined from users table
-	UserName  string    `db:"user_name"   json:"user_name"`
+	// Подтягивается из таблицы users
+	UserName string `db:"user_name"   json:"user_name"`
 }
 
 type Like struct {
