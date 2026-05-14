@@ -1,0 +1,25 @@
+# Go
+*.exe
+*.test
+/bin/
+/tmp/
+.env
+/uploads/
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
+Thumbs.db
+# IDE
+.idea/
+
+
+# Built frontend
+frontend/dist/
+
+# Environment variables
+.env
+.env.*
+!.env.example

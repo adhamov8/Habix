@@ -1,0 +1,1 @@
+ALTER TABLE checkins DROP COLUMN IF EXISTS image_url;
