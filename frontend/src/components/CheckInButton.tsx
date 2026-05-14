@@ -4,6 +4,16 @@ import { challengeApi, Challenge, Progress } from '../api/challenges'
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024
 
+const formatDeadlineLocal = (deadlineUTC: string): string => {
+  const parts = deadlineUTC.split(':').map(Number)
+  const d = new Date()
+  d.setUTCHours(parts[0], parts[1] || 0, 0, 0)
+  return d.toLocaleTimeString('ru-RU', {
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+}
+
+
 export default function CheckInButton({
   challenge,
   onProgressUpdate,
@@ -36,7 +46,6 @@ export default function CheckInButton({
 
   useEffect(() => { fetchProgress() }, [fetchProgress])
 
-  // Объект preview URL живёт пока выбрано фото; освобождаем при смене/размонтировании.
   useEffect(() => {
     return () => {
       if (photoPreview) URL.revokeObjectURL(photoPreview)
@@ -92,9 +101,7 @@ export default function CheckInButton({
       if (photoFile) {
         const fd = new FormData()
         fd.append('file', photoFile)
-        const { data } = await api.post<{ url: string }>('/uploads', fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        })
+        const { data } = await api.post<{ url: string }>('/uploads', fd)
         imageUrl = data.url
       }
       await challengeApi.checkIn(challenge.id, comment, imageUrl)
@@ -170,6 +177,12 @@ export default function CheckInButton({
       {photoError && (
         <div style={{ fontSize: '0.75rem', color: '#e74c3c', marginBottom: '0.5rem' }}>
           {photoError}
+        </div>
+      )}
+
+      {challenge.deadline_time && (
+        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+          Отметьтесь до {formatDeadlineLocal(challenge.deadline_time)}
         </div>
       )}
 

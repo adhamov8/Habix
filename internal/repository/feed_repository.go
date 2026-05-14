@@ -25,7 +25,6 @@ func (r *FeedRepository) Insert(ctx context.Context, e *domain.FeedEvent) error 
 	return err
 }
 
-// удаляем события ленты, связанные с указанным reference_id и типом
 func (r *FeedRepository) DeleteByReference(ctx context.Context, refID uuid.UUID, eventType string) error {
 	_, err := r.db.ExecContext(ctx, `
 		DELETE FROM feed_events

@@ -15,7 +15,6 @@ func NewLikeRepository(db *sqlx.DB) *LikeRepository {
 	return &LikeRepository{db: db}
 }
 
-// ставим или убираем лайк. Возвращает true, если лайк поставлен, и false — если снят
 func (r *LikeRepository) Toggle(ctx context.Context, checkInID, userID uuid.UUID) (bool, error) {
 	var deleted bool
 	err := r.db.QueryRowContext(ctx, `

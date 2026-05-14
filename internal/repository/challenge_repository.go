@@ -19,6 +19,27 @@ func NewChallengeRepository(db *sqlx.DB) *ChallengeRepository {
 	return &ChallengeRepository{db: db}
 }
 
+const selectChallenge = `
+	SELECT id, creator_id, category_id, title, description,
+		starts_at, ends_at, working_days, max_skips,
+		TO_CHAR(deadline_time, 'HH24:MI:SS') AS deadline_time,
+		is_public, invite_token, status, created_at
+	FROM challenges`
+
+const selectChallengeC = `
+	SELECT c.id, c.creator_id, c.category_id, c.title, c.description,
+		c.starts_at, c.ends_at, c.working_days, c.max_skips,
+		TO_CHAR(c.deadline_time, 'HH24:MI:SS') AS deadline_time,
+		c.is_public, c.invite_token, c.status, c.created_at
+	FROM challenges c`
+
+func (r *ChallengeRepository) GetDeadlineTimeText(ctx context.Context, id uuid.UUID) (string, error) {
+	var s string
+	err := r.db.GetContext(ctx, &s,
+		"SELECT TO_CHAR(deadline_time, 'HH24:MI:SS') FROM challenges WHERE id = $1", id)
+	return s, err
+}
+
 func (r *ChallengeRepository) Create(ctx context.Context, c *domain.Challenge) error {
 	return r.db.QueryRowContext(ctx, `
 		INSERT INTO challenges
@@ -35,7 +56,7 @@ func (r *ChallengeRepository) Create(ctx context.Context, c *domain.Challenge) e
 
 func (r *ChallengeRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Challenge, error) {
 	var c domain.Challenge
-	if err := r.db.GetContext(ctx, &c, "SELECT * FROM challenges WHERE id = $1", id); err != nil {
+	if err := r.db.GetContext(ctx, &c, selectChallenge+" WHERE id = $1", id); err != nil {
 		return nil, err
 	}
 	return &c, nil
@@ -43,7 +64,7 @@ func (r *ChallengeRepository) GetByID(ctx context.Context, id uuid.UUID) (*domai
 
 func (r *ChallengeRepository) GetByInviteToken(ctx context.Context, token uuid.UUID) (*domain.Challenge, error) {
 	var c domain.Challenge
-	if err := r.db.GetContext(ctx, &c, "SELECT * FROM challenges WHERE invite_token = $1", token); err != nil {
+	if err := r.db.GetContext(ctx, &c, selectChallenge+" WHERE invite_token = $1", token); err != nil {
 		return nil, err
 	}
 	return &c, nil
@@ -69,7 +90,6 @@ func (r *ChallengeRepository) SetStatus(ctx context.Context, id uuid.UUID, statu
 	return err
 }
 
-// переводим будущие челленджи в статус 'active', если их дата старта уже наступила
 func (r *ChallengeRepository) ActivateUpcoming(ctx context.Context) (int64, error) {
 	res, err := r.db.ExecContext(ctx, `
 		UPDATE challenges SET status = 'active'
@@ -80,8 +100,6 @@ func (r *ChallengeRepository) ActivateUpcoming(ctx context.Context) (int64, erro
 	return res.RowsAffected()
 }
 
-// завершаем активные челленджи, у которых дата окончания уже прошла,
-// и возвращает ID челленджей, которые перешли в статус 'finished'
 func (r *ChallengeRepository) FinishExpired(ctx context.Context) ([]uuid.UUID, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		UPDATE challenges SET status = 'finished'
@@ -102,25 +120,26 @@ func (r *ChallengeRepository) FinishExpired(ctx context.Context) ([]uuid.UUID, e
 	return ids, rows.Err()
 }
 
-// возвращаем количество челленджей со статусом 'active'
 func (r *ChallengeRepository) CountActive(ctx context.Context) (int, error) {
 	var count int
 	err := r.db.GetContext(ctx, &count, "SELECT COUNT(*) FROM challenges WHERE status = 'active'")
 	return count, err
 }
 
-// возвращаем челленджи, которые пользователь создал или в которых участвует
 func (r *ChallengeRepository) ListForUser(ctx context.Context, userID uuid.UUID) ([]domain.Challenge, error) {
 	var list []domain.Challenge
 	err := r.db.SelectContext(ctx, &list, `
-		SELECT DISTINCT c.* FROM challenges c
+		SELECT DISTINCT c.id, c.creator_id, c.category_id, c.title, c.description,
+			c.starts_at, c.ends_at, c.working_days, c.max_skips,
+			TO_CHAR(c.deadline_time, 'HH24:MI:SS') AS deadline_time,
+			c.is_public, c.invite_token, c.status, c.created_at
+		FROM challenges c
 		LEFT JOIN challenge_participants cp ON cp.challenge_id = c.id
 		WHERE c.creator_id = $1 OR cp.user_id = $1
 		ORDER BY c.created_at DESC`, userID)
 	return list, err
 }
 
-// возвращаем публичные челленджи. Фильтры по категории и поиску — необязательные
 func (r *ChallengeRepository) ListPublic(ctx context.Context, categoryID *int, search string, limit, offset int) ([]domain.Challenge, error) {
 	var (
 		clauses []string
@@ -147,12 +166,11 @@ func (r *ChallengeRepository) ListPublic(ctx context.Context, categoryID *int, s
 	offsetArg := argIdx
 	args = append(args, limit, offset)
 
-	query := fmt.Sprintf(`
-		SELECT c.* FROM challenges c
+	query := fmt.Sprintf(`%s
 		WHERE %s
 		ORDER BY c.created_at DESC
 		LIMIT $%d OFFSET $%d`,
-		strings.Join(clauses, " AND "), limitArg, offsetArg)
+		selectChallengeC, strings.Join(clauses, " AND "), limitArg, offsetArg)
 
 	var list []domain.Challenge
 	if err := r.db.SelectContext(ctx, &list, query, args...); err != nil {

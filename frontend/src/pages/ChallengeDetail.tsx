@@ -9,6 +9,16 @@ import Leaderboard from '../components/Leaderboard'
 import Stats from '../components/Stats'
 
 const STATUS_RU: Record<string, string> = { active: 'Активный', upcoming: 'Скоро', finished: 'Завершён' }
+
+const formatDeadlineLocal = (deadlineUTC: string): string => {
+  const parts = deadlineUTC.split(':').map(Number)
+  const d = new Date()
+  d.setUTCHours(parts[0], parts[1] || 0, 0, 0)
+  return d.toLocaleTimeString('ru-RU', {
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+}
+
 const TAB_LABELS: Record<string, string> = { feed: '📰 Лента', leaderboard: '🏆 Рейтинг', stats: '📊 Статистика', summary: '🎉 Итоги' }
 const CAT_EMOJI: Record<number, string> = {
   1: '🏃',
@@ -102,6 +112,11 @@ export default function ChallengeDetail() {
             {challenge.participant_count != null && (
               <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
                 👥 {challenge.participant_count}
+              </span>
+            )}
+            {challenge.deadline_time && (
+              <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                ⏰ Дедлайн отметки: до {formatDeadlineLocal(challenge.deadline_time)}
               </span>
             )}
           </div>

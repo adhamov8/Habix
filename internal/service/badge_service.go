@@ -33,7 +33,6 @@ func (s *BadgeService) SetNotificationService(ns *NotificationService) {
 	s.notifSvc = ns
 }
 
-// проверяем условия значков после отметки и выдаёт те, которые заслужил пользователь
 func (s *BadgeService) CheckAndAward(ctx context.Context, userID, challengeID uuid.UUID) {
 	challenge, err := s.challenges.GetByID(ctx, challengeID)
 	if err != nil {
@@ -77,7 +76,6 @@ func (s *BadgeService) CheckAndAward(ctx context.Context, userID, challengeID uu
 		s.awardBadge(ctx, userID, "perfect_week", &challengeID)
 	}
 
-	// На завершённом челлендже выдаём значок только при 100% выполнении
 	if challenge.Status == "finished" {
 		totalWorkingDays := countWorkingDays(challenge.StartsAt, challenge.EndsAt, challenge.WorkingDays)
 		if totalWorkingDays > 0 && doneDays >= totalWorkingDays {
@@ -102,7 +100,6 @@ func (s *BadgeService) awardBadge(ctx context.Context, userID uuid.UUID, code st
 		return
 	}
 
-	// Событие в ленту пишем только если значок привязан к конкретному челленджу
 	if challengeID != nil {
 		feedData, _ := json.Marshal(map[string]any{
 			"badge_title": bd.Title,
@@ -128,17 +125,15 @@ func (s *BadgeService) awardBadge(ctx context.Context, userID uuid.UUID, code st
 	}
 }
 
-// проверяем, отмечены ли все рабочие дни текущей недели
 func (s *BadgeService) isPerfectWeek(doneMap map[string]bool, wdSet map[int]bool) bool {
 	today := time.Now().UTC().Truncate(24 * time.Hour)
-	// Находим понедельник текущей недели
 	daysSinceMonday := (int(today.Weekday()) + 6) % 7
 	monday := today.AddDate(0, 0, -daysSinceMonday)
 
 	for i := 0; i < 7; i++ {
 		d := monday.AddDate(0, 0, i)
 		if d.After(today) {
-			break // Будущие дни пропускаем
+			break
 		}
 		dayIdx := (int(d.Weekday()) + 6) % 7
 		if wdSet[dayIdx] {
@@ -150,8 +145,6 @@ func (s *BadgeService) isPerfectWeek(doneMap map[string]bool, wdSet map[int]bool
 	return true
 }
 
-// выдаём значки за завершение и значок «Ветеран»
-// одному участнику после окончания челленджа
 func (s *BadgeService) CheckAndAwardOnFinish(ctx context.Context, userID, challengeID uuid.UUID, adherencePct float64) {
 	if adherencePct >= 50 {
 		s.awardBadge(ctx, userID, "complete_50", &challengeID)
@@ -167,8 +160,6 @@ func (s *BadgeService) CheckAndAwardOnFinish(ctx context.Context, userID, challe
 	}
 }
 
-// считаем выполнение каждого участника
-// только что завершённого челленджа и выдаёт нужные значки
 func (s *BadgeService) ProcessFinishedChallenge(ctx context.Context, challengeID uuid.UUID) {
 	challenge, err := s.challenges.GetByID(ctx, challengeID)
 	if err != nil {

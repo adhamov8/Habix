@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"tracker/internal/domain"
@@ -13,24 +16,25 @@ import (
 )
 
 var (
-	ErrNotFound       = errors.New("not found")
-	ErrForbidden      = errors.New("forbidden")
-	ErrNotUpcoming    = errors.New("challenge can only be edited while upcoming")
-	ErrAlreadyJoined  = errors.New("already joined")
-	ErrNotPublic      = errors.New("challenge is not public")
-	ErrChallengeEnded = errors.New("challenge is finished")
+	ErrNotFound       = errors.New("не найдено")
+	ErrForbidden      = errors.New("действие запрещено")
+	ErrNotUpcoming    = errors.New("редактировать можно только челлендж, который ещё не начался")
+	ErrAlreadyJoined  = errors.New("вы уже присоединились")
+	ErrNotPublic      = errors.New("челлендж не публичный")
+	ErrChallengeEnded = errors.New("челлендж уже завершён")
 )
 
 type CreateChallengeParams struct {
-	CategoryID   int     `json:"category_id"`
-	Title        string  `json:"title"`
-	Description  *string `json:"description"`
-	StartsAt     string  `json:"starts_at"`
-	EndsAt       string  `json:"ends_at"`
-	WorkingDays  []int64 `json:"working_days"`
-	MaxSkips     int     `json:"max_skips"`
-	DeadlineTime string  `json:"deadline_time"`
-	IsPublic     bool    `json:"is_public"`
+	CategoryID                    int     `json:"category_id"`
+	Title                         string  `json:"title"`
+	Description                   *string `json:"description"`
+	StartsAt                      string  `json:"starts_at"`
+	EndsAt                        string  `json:"ends_at"`
+	WorkingDays                   []int64 `json:"working_days"`
+	MaxSkips                      int     `json:"max_skips"`
+	DeadlineTime                  string  `json:"deadline_time"`
+	DeadlineTimezoneOffsetMinutes int     `json:"deadline_timezone_offset_minutes"`
+	IsPublic                      bool    `json:"is_public"`
 }
 
 type UpdateChallengeParams struct {
@@ -56,19 +60,48 @@ func NewChallengeService(c ChallengeRepo, p ParticipantRepo, f FeedRepo) *Challe
 	return &ChallengeService{challenges: c, participants: p, feed: f}
 }
 
-// подключаем сервис значков, чтобы при завершении челленджа выдавать награды
 func (s *ChallengeService) SetBadgeService(bs *BadgeService) {
 	s.badgeSvc = bs
+}
+
+func convertLocalDeadlineToUTC(deadlineTime string, offsetMin int) string {
+	parts := strings.Split(deadlineTime, ":")
+	if len(parts) < 2 {
+		return deadlineTime
+	}
+	h, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return deadlineTime
+	}
+	m, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return deadlineTime
+	}
+	sec := 0
+	if len(parts) >= 3 {
+		if s, err := strconv.Atoi(parts[2]); err == nil {
+			sec = s
+		}
+	}
+	totalLocal := h*60 + m
+	totalUTC := totalLocal - offsetMin
+	for totalUTC < 0 {
+		totalUTC += 1440
+	}
+	for totalUTC >= 1440 {
+		totalUTC -= 1440
+	}
+	return fmt.Sprintf("%02d:%02d:%02d", totalUTC/60, totalUTC%60, sec)
 }
 
 func (s *ChallengeService) Create(ctx context.Context, creatorID uuid.UUID, p CreateChallengeParams) (*domain.Challenge, error) {
 	startsAt, err := time.Parse("2006-01-02", p.StartsAt)
 	if err != nil {
-		return nil, errors.New("invalid starts_at date format, use YYYY-MM-DD")
+		return nil, errors.New("неверный формат даты начала, используйте YYYY-MM-DD")
 	}
 	endsAt, err := time.Parse("2006-01-02", p.EndsAt)
 	if err != nil {
-		return nil, errors.New("invalid ends_at date format, use YYYY-MM-DD")
+		return nil, errors.New("неверный формат даты окончания, используйте YYYY-MM-DD")
 	}
 
 	status := "upcoming"
@@ -81,6 +114,7 @@ func (s *ChallengeService) Create(ctx context.Context, creatorID uuid.UUID, p Cr
 	if deadlineTime == "" {
 		deadlineTime = "23:00"
 	}
+	deadlineTime = convertLocalDeadlineToUTC(deadlineTime, p.DeadlineTimezoneOffsetMinutes)
 
 	workingDays := pq.Int64Array(p.WorkingDays)
 	if len(workingDays) == 0 {
@@ -106,7 +140,6 @@ func (s *ChallengeService) Create(ctx context.Context, creatorID uuid.UUID, p Cr
 		return nil, err
 	}
 
-	// Автор автоматически становится участником
 	_ = s.participants.Add(ctx, c.ID, creatorID)
 
 	_ = s.feed.Insert(ctx, &domain.FeedEvent{
@@ -146,14 +179,14 @@ func (s *ChallengeService) Update(ctx context.Context, challengeID, creatorID uu
 	if p.StartsAt != nil {
 		t, err := time.Parse("2006-01-02", *p.StartsAt)
 		if err != nil {
-			return nil, errors.New("invalid starts_at date format")
+			return nil, errors.New("неверный формат даты начала")
 		}
 		c.StartsAt = t
 	}
 	if p.EndsAt != nil {
 		t, err := time.Parse("2006-01-02", *p.EndsAt)
 		if err != nil {
-			return nil, errors.New("invalid ends_at date format")
+			return nil, errors.New("неверный формат даты окончания")
 		}
 		c.EndsAt = t
 	}
@@ -321,7 +354,7 @@ func (s *ChallengeService) RemoveParticipant(ctx context.Context, challengeID, c
 		return ErrForbidden
 	}
 	if targetUserID == creatorID {
-		return errors.New("creator cannot remove themselves")
+		return errors.New("автор не может удалить сам себя из челленджа")
 	}
 	return s.participants.Remove(ctx, challengeID, targetUserID)
 }

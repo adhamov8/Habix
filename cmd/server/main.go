@@ -24,7 +24,7 @@ import (
 
 // @title Cohabit API
 // @version 1.0
-// @description API для веб-сервиса коллективного трекинга привычек
+// @description API для веб-сервиса коллективного челленджа и трекинга привычек
 // @host localhost:8080
 // @BasePath /api/v1
 // @securityDefinitions.apikey BearerAuth
@@ -37,7 +37,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Настройка slog
 	var level slog.Level
 	switch strings.ToLower(cfg.LogLevel) {
 	case "debug":
@@ -60,7 +59,6 @@ func main() {
 	defer database.Close()
 	metrics.RegisterDBStats(database)
 
-	// Запуск миграций
 	migrationsDir := "/migrations"
 	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
 		migrationsDir = "./internal/db/migrations"
@@ -70,7 +68,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Создание директории для загружаемых файлов, если она не существует
 	uploadDir := "./uploads"
 	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
 		slog.Error("failed to create uploads dir", "error", err)

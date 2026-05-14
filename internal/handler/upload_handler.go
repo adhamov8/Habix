@@ -26,31 +26,28 @@ func UploadHandler(uploadDir string) http.HandlerFunc {
 
 		file, header, err := r.FormFile("file")
 		if err != nil {
-			jsonError(w, "file is required (max 5MB)", http.StatusBadRequest)
+			jsonError(w, "файл обязателен (макс 5 МБ)", http.StatusBadRequest)
 			return
 		}
 		defer file.Close()
 
-		// Узнаём тип файла по первым 512 байтам
 		buf := make([]byte, 512)
 		n, err := file.Read(buf)
 		if err != nil && err != io.EOF {
-			jsonError(w, "failed to read file", http.StatusBadRequest)
+			jsonError(w, "не удалось прочитать файл", http.StatusBadRequest)
 			return
 		}
 		mime := http.DetectContentType(buf[:n])
 		if !allowedMIME[mime] {
-			jsonError(w, fmt.Sprintf("unsupported file type: %s", mime), http.StatusBadRequest)
+			jsonError(w, fmt.Sprintf("неподдерживаемый тип файла: %s", mime), http.StatusBadRequest)
 			return
 		}
-		// Возвращаемся в начало файла
 		if seeker, ok := file.(io.Seeker); ok {
 			seeker.Seek(0, io.SeekStart)
 		}
 
 		ext := filepath.Ext(header.Filename)
 		if ext == "" {
-			// Если расширения нет, берём его из MIME-типа
 			switch mime {
 			case "image/jpeg":
 				ext = ".jpg"
@@ -67,13 +64,13 @@ func UploadHandler(uploadDir string) http.HandlerFunc {
 		filename := uuid.New().String() + ext
 		dst, err := os.Create(filepath.Join(uploadDir, filename))
 		if err != nil {
-			jsonError(w, "failed to save file", http.StatusInternalServerError)
+			jsonError(w, "не удалось сохранить файл", http.StatusInternalServerError)
 			return
 		}
 		defer dst.Close()
 
 		if _, err := io.Copy(dst, file); err != nil {
-			jsonError(w, "failed to save file", http.StatusInternalServerError)
+			jsonError(w, "не удалось сохранить файл", http.StatusInternalServerError)
 			return
 		}
 

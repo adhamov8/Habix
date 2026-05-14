@@ -117,6 +117,14 @@ func (m *mockChallengeRepo) ListPublic(_ context.Context, _ *int, _ string, _, _
 	return nil, nil
 }
 
+func (m *mockChallengeRepo) GetDeadlineTimeText(_ context.Context, id uuid.UUID) (string, error) {
+	c, ok := m.challenges[id]
+	if !ok {
+		return "", sql.ErrNoRows
+	}
+	return c.DeadlineTime, nil
+}
+
 // --- ParticipantRepo mock ---
 
 type mockParticipantRepo struct {

@@ -32,8 +32,6 @@ func (r *BadgeRepository) GetDefinitionByCode(ctx context.Context, code string) 
 	return &bd, nil
 }
 
-// Award выдаёт значок пользователю. Использует ON CONFLICT DO NOTHING, чтобы не дублировать значки.
-// Возвращает true, если значок реально был выдан (а не пропущен как дубликат).
 func (r *BadgeRepository) Award(ctx context.Context, userID uuid.UUID, badgeCode string, challengeID *uuid.UUID) (bool, error) {
 	res, err := r.db.ExecContext(ctx, `
 		INSERT INTO user_badges (user_id, badge_id, challenge_id)
@@ -71,7 +69,6 @@ func (r *BadgeRepository) ListRecent(ctx context.Context, limit int) ([]domain.U
 	return list, err
 }
 
-// возвращаем число челленджей, в которых участвует пользователь.
 func (r *BadgeRepository) CountUserChallenges(ctx context.Context, userID uuid.UUID) (int, error) {
 	var count int
 	err := r.db.GetContext(ctx, &count,
@@ -79,7 +76,6 @@ func (r *BadgeRepository) CountUserChallenges(ctx context.Context, userID uuid.U
 	return count, err
 }
 
-// возвращаем число завершённых челленджей пользователя.
 func (r *BadgeRepository) CountFinishedChallengesForUser(ctx context.Context, userID uuid.UUID) (int, error) {
 	var count int
 	err := r.db.GetContext(ctx, &count, `

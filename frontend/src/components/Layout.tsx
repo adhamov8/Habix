@@ -158,7 +158,7 @@ export default function Layout() {
               {menuOpen ? '✕' : '☰'}
             </button>
             <Link to="/" className="nav-brand">
-              🔥 Cohabit
+               Cohabit
             </Link>
           </div>
           <nav className={`nav-links${menuOpen ? ' open' : ''}`}>

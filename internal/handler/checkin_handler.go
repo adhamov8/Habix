@@ -5,11 +5,12 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"tracker/internal/metrics"
 	"tracker/internal/middleware"
 	"tracker/internal/service"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 type CheckInHandler struct {
@@ -32,7 +33,7 @@ func (h *CheckInHandler) CheckIn(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	challengeID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid challenge id", http.StatusBadRequest)
+		jsonError(w, "неверный ID челленджа", http.StatusBadRequest)
 		return
 	}
 
@@ -40,14 +41,13 @@ func (h *CheckInHandler) CheckIn(w http.ResponseWriter, r *http.Request) {
 		Comment  string `json:"comment"`
 		ImageURL string `json:"image_url"`
 	}
-	// Тело запроса необязательно — без него комментарий и фото будут пустыми
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
 	ci, err := h.checkInSvc.CheckIn(r.Context(), userID, challengeID, req.Comment, req.ImageURL)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrNotFound):
-			jsonError(w, "challenge not found", http.StatusNotFound)
+			jsonError(w, "челлендж не найден", http.StatusNotFound)
 		case errors.Is(err, service.ErrChallengeNotActive):
 			jsonError(w, err.Error(), http.StatusConflict)
 		case errors.Is(err, service.ErrNotParticipant):
@@ -78,14 +78,14 @@ func (h *CheckInHandler) Undo(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	challengeID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid challenge id", http.StatusBadRequest)
+		jsonError(w, "неверный ID челленджа", http.StatusBadRequest)
 		return
 	}
 
 	if err := h.checkInSvc.Undo(r.Context(), userID, challengeID); err != nil {
 		switch {
 		case errors.Is(err, service.ErrNotFound):
-			jsonError(w, "challenge not found", http.StatusNotFound)
+			jsonError(w, "челлендж не найден", http.StatusNotFound)
 		case errors.Is(err, service.ErrUndoNotAllowed):
 			jsonError(w, err.Error(), http.StatusForbidden)
 		case errors.Is(err, service.ErrNotCheckedIn):
@@ -109,17 +109,17 @@ func (h *CheckInHandler) GetProgress(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	challengeID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid challenge id", http.StatusBadRequest)
+		jsonError(w, "неверный ID челленджа", http.StatusBadRequest)
 		return
 	}
 
 	progress, err := h.checkInSvc.GetProgress(r.Context(), userID, challengeID)
 	if err != nil {
 		if errors.Is(err, service.ErrNotFound) {
-			jsonError(w, "challenge not found", http.StatusNotFound)
+			jsonError(w, "челлендж не найден", http.StatusNotFound)
 			return
 		}
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	jsonResponse(w, progress, http.StatusOK)
@@ -135,13 +135,13 @@ func (h *CheckInHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	challengeID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid challenge id", http.StatusBadRequest)
+		jsonError(w, "неверный ID челленджа", http.StatusBadRequest)
 		return
 	}
 
 	list, err := h.checkInSvc.ListAll(r.Context(), challengeID, userID)
 	if err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	if list == nil {

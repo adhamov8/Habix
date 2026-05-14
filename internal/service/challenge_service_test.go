@@ -35,7 +35,7 @@ func TestCreate_Success(t *testing.T) {
 	assert.Equal(t, "Morning Run", challenge.Title)
 	assert.Equal(t, creatorID, challenge.CreatorID)
 	assert.Equal(t, "upcoming", challenge.Status)
-	assert.Equal(t, "23:00", challenge.DeadlineTime)
+	assert.Equal(t, "23:00:00", challenge.DeadlineTime)
 
 	assert.Len(t, cr.challenges, 1)
 
@@ -69,7 +69,7 @@ func TestCreate_InvalidDateFormat(t *testing.T) {
 		EndsAt:     futureDate(10),
 	})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid starts_at")
+	assert.Contains(t, err.Error(), "неверный формат даты начала")
 }
 
 func TestUpdate_Success(t *testing.T) {
@@ -339,7 +339,7 @@ func TestRemoveParticipant_CannotRemoveSelf(t *testing.T) {
 
 	err = svc.RemoveParticipant(context.Background(), challenge.ID, creatorID, creatorID)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "creator cannot remove themselves")
+	assert.Contains(t, err.Error(), "автор не может удалить сам себя")
 }
 
 func TestRemoveParticipant_Forbidden(t *testing.T) {

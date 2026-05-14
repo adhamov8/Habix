@@ -23,7 +23,7 @@ func (h *FeedCommentHandler) AddComment(w http.ResponseWriter, r *http.Request) 
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	eventID, err := uuid.Parse(chi.URLParam(r, "eventId"))
 	if err != nil {
-		jsonError(w, "invalid event id", http.StatusBadRequest)
+		jsonError(w, "неверный ID события", http.StatusBadRequest)
 		return
 	}
 
@@ -31,7 +31,7 @@ func (h *FeedCommentHandler) AddComment(w http.ResponseWriter, r *http.Request) 
 		Text string `json:"text"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Text == "" {
-		jsonError(w, "text is required", http.StatusBadRequest)
+		jsonError(w, "текст обязателен", http.StatusBadRequest)
 		return
 	}
 
@@ -43,7 +43,7 @@ func (h *FeedCommentHandler) AddComment(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := h.repo.Create(r.Context(), fc); err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	jsonResponse(w, fc, http.StatusCreated)
@@ -52,13 +52,13 @@ func (h *FeedCommentHandler) AddComment(w http.ResponseWriter, r *http.Request) 
 func (h *FeedCommentHandler) ListComments(w http.ResponseWriter, r *http.Request) {
 	eventID, err := uuid.Parse(chi.URLParam(r, "eventId"))
 	if err != nil {
-		jsonError(w, "invalid event id", http.StatusBadRequest)
+		jsonError(w, "неверный ID события", http.StatusBadRequest)
 		return
 	}
 
 	list, err := h.repo.ListForEvent(r.Context(), eventID)
 	if err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	if list == nil {
@@ -71,12 +71,12 @@ func (h *FeedCommentHandler) DeleteComment(w http.ResponseWriter, r *http.Reques
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	commentID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid comment id", http.StatusBadRequest)
+		jsonError(w, "неверный ID комментария", http.StatusBadRequest)
 		return
 	}
 
 	if err := h.repo.Delete(r.Context(), commentID, userID); err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

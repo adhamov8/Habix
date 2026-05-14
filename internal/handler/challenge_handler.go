@@ -34,7 +34,7 @@ func NewChallengeHandler(cs *service.ChallengeService, cats *repository.Category
 func (h *ChallengeHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
 	cats, err := h.categories.List(r.Context())
 	if err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	if cats == nil {
@@ -57,11 +57,11 @@ func (h *ChallengeHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var p service.CreateChallengeParams
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-		jsonError(w, "invalid request body", http.StatusBadRequest)
+		jsonError(w, "неверный формат запроса", http.StatusBadRequest)
 		return
 	}
 	if p.Title == "" || p.StartsAt == "" || p.EndsAt == "" || p.CategoryID == 0 {
-		jsonError(w, "title, category_id, starts_at and ends_at are required", http.StatusBadRequest)
+		jsonError(w, "обязательны title, category_id, starts_at и ends_at", http.StatusBadRequest)
 		return
 	}
 
@@ -91,7 +91,7 @@ func (h *ChallengeHandler) ListChallenges(w http.ResponseWriter, r *http.Request
 		if cat := q.Get("category"); cat != "" {
 			v, err := strconv.Atoi(cat)
 			if err != nil {
-				jsonError(w, "invalid category param", http.StatusBadRequest)
+				jsonError(w, "неверный параметр категории", http.StatusBadRequest)
 				return
 			}
 			categoryID = &v
@@ -106,7 +106,7 @@ func (h *ChallengeHandler) ListChallenges(w http.ResponseWriter, r *http.Request
 
 		list, err := h.challengeSvc.ListPublic(r.Context(), categoryID, search, limit, offset)
 		if err != nil {
-			jsonError(w, "internal server error", http.StatusInternalServerError)
+			jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 			return
 		}
 		if list == nil {
@@ -117,10 +117,9 @@ func (h *ChallengeHandler) ListChallenges(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// По умолчанию отдаём все публичные челленджи без фильтра
 	list, err := h.challengeSvc.ListPublic(r.Context(), nil, "", 20, 0)
 	if err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	if list == nil {
@@ -140,7 +139,7 @@ func (h *ChallengeHandler) ListMy(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	list, err := h.challengeSvc.ListForUser(r.Context(), userID)
 	if err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	if list == nil {
@@ -162,21 +161,19 @@ func (h *ChallengeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid challenge id", http.StatusBadRequest)
+		jsonError(w, "неверный ID челленджа", http.StatusBadRequest)
 		return
 	}
 	c, err := h.challengeSvc.GetByID(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, service.ErrNotFound) {
-			jsonError(w, "challenge not found", http.StatusNotFound)
+			jsonError(w, "челлендж не найден", http.StatusNotFound)
 			return
 		}
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 
-	// Активируем сегодняшние upcoming-челленджи сразу при открытии,
-	// чтобы пользователь не ждал часового тика StatusUpdater.
 	if c.Status == "upcoming" && !c.StartsAt.After(time.Now().UTC()) {
 		if err := h.challengeSvc.UpdateStatus(r.Context(), c.ID, "active"); err == nil {
 			if refreshed, ferr := h.challengeSvc.GetByID(r.Context(), c.ID); ferr == nil {
@@ -185,7 +182,6 @@ func (h *ChallengeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Считаем статус на лету, но не трогаем, если челлендж уже завершён вручную
 	if c.Status != "finished" {
 		now := time.Now().UTC().Truncate(24 * time.Hour)
 		start := c.StartsAt.Truncate(24 * time.Hour)
@@ -227,13 +223,13 @@ func (h *ChallengeHandler) Update(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid challenge id", http.StatusBadRequest)
+		jsonError(w, "неверный ID челленджа", http.StatusBadRequest)
 		return
 	}
 
 	var p service.UpdateChallengeParams
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-		jsonError(w, "invalid request body", http.StatusBadRequest)
+		jsonError(w, "неверный формат запроса", http.StatusBadRequest)
 		return
 	}
 
@@ -256,7 +252,7 @@ func (h *ChallengeHandler) Finish(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid challenge id", http.StatusBadRequest)
+		jsonError(w, "неверный ID челленджа", http.StatusBadRequest)
 		return
 	}
 	if err := h.challengeSvc.Finish(r.Context(), id, userID); err != nil {
@@ -277,7 +273,7 @@ func (h *ChallengeHandler) GetInviteLink(w http.ResponseWriter, r *http.Request)
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid challenge id", http.StatusBadRequest)
+		jsonError(w, "неверный ID челленджа", http.StatusBadRequest)
 		return
 	}
 	token, err := h.challengeSvc.GetInviteLink(r.Context(), id, userID)
@@ -299,7 +295,7 @@ func (h *ChallengeHandler) JoinByInvite(w http.ResponseWriter, r *http.Request) 
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	token, err := uuid.Parse(chi.URLParam(r, "inviteToken"))
 	if err != nil {
-		jsonError(w, "invalid invite token", http.StatusBadRequest)
+		jsonError(w, "неверный код приглашения", http.StatusBadRequest)
 		return
 	}
 	c, err := h.challengeSvc.JoinByInviteToken(r.Context(), userID, token)
@@ -325,7 +321,7 @@ func (h *ChallengeHandler) JoinPublic(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid challenge id", http.StatusBadRequest)
+		jsonError(w, "неверный ID челленджа", http.StatusBadRequest)
 		return
 	}
 	if err := h.challengeSvc.JoinPublic(r.Context(), userID, id); err != nil {
@@ -339,12 +335,12 @@ func (h *ChallengeHandler) RemoveParticipant(w http.ResponseWriter, r *http.Requ
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	challengeID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid challenge id", http.StatusBadRequest)
+		jsonError(w, "неверный ID челленджа", http.StatusBadRequest)
 		return
 	}
 	targetID, err := uuid.Parse(chi.URLParam(r, "userID"))
 	if err != nil {
-		jsonError(w, "invalid user id", http.StatusBadRequest)
+		jsonError(w, "неверный ID пользователя", http.StatusBadRequest)
 		return
 	}
 	if err := h.challengeSvc.RemoveParticipant(r.Context(), challengeID, userID, targetID); err != nil {
@@ -357,9 +353,9 @@ func (h *ChallengeHandler) RemoveParticipant(w http.ResponseWriter, r *http.Requ
 func handleServiceError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, service.ErrNotFound):
-		jsonError(w, "not found", http.StatusNotFound)
+		jsonError(w, "не найдено", http.StatusNotFound)
 	case errors.Is(err, service.ErrForbidden):
-		jsonError(w, "forbidden", http.StatusForbidden)
+		jsonError(w, "действие запрещено", http.StatusForbidden)
 	case errors.Is(err, service.ErrNotUpcoming):
 		jsonError(w, err.Error(), http.StatusConflict)
 	case errors.Is(err, service.ErrAlreadyJoined):

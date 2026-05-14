@@ -18,12 +18,10 @@ func NewStatusUpdater(c *repository.ChallengeRepository) *StatusUpdater {
 	return &StatusUpdater{challenges: c}
 }
 
-// подключаем выдачу значков при автоматическом завершении
 func (u *StatusUpdater) SetBadgeService(bs *BadgeService) {
 	u.badgeSvc = bs
 }
 
-// запускаем обновление статусов сразу и потом каждый час
 func (u *StatusUpdater) Start(ctx context.Context) {
 	u.run()
 	ticker := time.NewTicker(1 * time.Hour)

@@ -4,10 +4,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"tracker/internal/middleware"
 	"tracker/internal/service"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 type NotificationHandler struct {
@@ -43,7 +44,7 @@ func (h *NotificationHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	list, err := h.notifSvc.List(r.Context(), userID, limit, offset)
 	if err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	if list == nil {
@@ -63,7 +64,7 @@ func (h *NotificationHandler) UnreadCount(w http.ResponseWriter, r *http.Request
 
 	count, err := h.notifSvc.CountUnread(r.Context(), userID)
 	if err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	jsonResponse(w, map[string]int{"count": count}, http.StatusOK)
@@ -79,12 +80,12 @@ func (h *NotificationHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid notification id", http.StatusBadRequest)
+		jsonError(w, "неверный ID уведомления", http.StatusBadRequest)
 		return
 	}
 
 	if err := h.notifSvc.MarkRead(r.Context(), id, userID); err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -99,7 +100,7 @@ func (h *NotificationHandler) MarkAllRead(w http.ResponseWriter, r *http.Request
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 
 	if err := h.notifSvc.MarkAllRead(r.Context(), userID); err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

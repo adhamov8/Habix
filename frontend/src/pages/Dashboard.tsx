@@ -26,6 +26,18 @@ function getCatClass(catId: number) {
   return CATEGORY_COLORS[catId] || 'cat-border-other'
 }
 
+function totalWorkingDays(startsAt: string, endsAt: string, workingDays: number[]): number {
+  if (!startsAt || !endsAt || !workingDays?.length) return 0
+  const start = new Date(startsAt.split('T')[0] + 'T00:00:00Z')
+  const end = new Date(endsAt.split('T')[0] + 'T00:00:00Z')
+  let count = 0
+  for (const d = new Date(start); d.getTime() <= end.getTime(); d.setUTCDate(d.getUTCDate() + 1)) {
+    const weekday = (d.getUTCDay() + 6) % 7 // 0=Пн ... 6=Вс
+    if (workingDays.includes(weekday)) count++
+  }
+  return count
+}
+
 function StatusBadge({ status }: { status: string }) {
   const cls = status === 'active' ? 'badge-active' : status === 'upcoming' ? 'badge-upcoming' : 'badge-finished'
   return <span className={`badge ${cls}`}>{STATUS_RU[status] || status}</span>
@@ -86,12 +98,19 @@ function ActiveChallengeCard({ challenge }: { challenge: Challenge }) {
 
         {progress ? (
           <>
-            <MiniProgressBar value={progress.done_days} max={progress.total_days} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
-              <span>День {progress.done_days} из {progress.total_days}</span>
-              <span>🔥 {progress.current_streak}</span>
-              <span>{progress.adherence_pct}%</span>
-            </div>
+            {(() => {
+              const totalPlanned = totalWorkingDays(challenge.starts_at, challenge.ends_at, challenge.working_days)
+              return (
+                <>
+                  <MiniProgressBar value={progress.done_days} max={totalPlanned} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
+                    <span>День {progress.done_days} из {totalPlanned}</span>
+                    <span>🔥 {progress.current_streak}</span>
+                    <span>{progress.adherence_pct}%</span>
+                  </div>
+                </>
+              )
+            })()}
             <div style={{ marginTop: '0.5rem' }}>
               {progress.checked_in_today ? (
                 <div style={{ textAlign: 'center', padding: '0.4rem', background: '#d1fae5', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: '#065f46', fontWeight: 600 }}>

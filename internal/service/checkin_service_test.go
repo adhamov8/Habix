@@ -19,12 +19,13 @@ func todayWorkingDay() int64 {
 func activeChallenge() *domain.Challenge {
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 	return &domain.Challenge{
-		ID:          uuid.New(),
-		CreatorID:   uuid.New(),
-		Status:      "active",
-		StartsAt:    today.AddDate(0, 0, -10),
-		EndsAt:      today.AddDate(0, 0, 10),
-		WorkingDays: pq.Int64Array{0, 1, 2, 3, 4, 5, 6},
+		ID:           uuid.New(),
+		CreatorID:    uuid.New(),
+		Status:       "active",
+		StartsAt:     today.AddDate(0, 0, -10),
+		EndsAt:       today.AddDate(0, 0, 10),
+		WorkingDays:  pq.Int64Array{0, 1, 2, 3, 4, 5, 6},
+		DeadlineTime: "23:59:59",
 	}
 }
 

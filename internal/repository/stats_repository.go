@@ -24,7 +24,6 @@ type participantCounts struct {
 	DoneDays int       `db:"done_days"`
 }
 
-// возвращаем число выполненных дней по каждому участнику (из таблицы checkins)
 func (r *StatsRepository) GetParticipantCounts(ctx context.Context, challengeID uuid.UUID) ([]participantCounts, error) {
 	var list []participantCounts
 	err := r.db.SelectContext(ctx, &list, `
@@ -45,7 +44,6 @@ type userCheckIn struct {
 	Date   time.Time `db:"date"`
 }
 
-// возвращаем все отметки челленджа, отсортированные по пользователю и дате
 func (r *StatsRepository) GetCheckInsForChallenge(ctx context.Context, challengeID uuid.UUID) ([]userCheckIn, error) {
 	var list []userCheckIn
 	err := r.db.SelectContext(ctx, &list, `
@@ -62,7 +60,6 @@ type userChallengeStats struct {
 	TotalDays   int       `db:"total_days"`
 }
 
-// возвращаем статистику пользователя по каждому челленджу.
 func (r *StatsRepository) GetUserChallengeStats(ctx context.Context, userID uuid.UUID) ([]userChallengeStats, error) {
 	var list []userChallengeStats
 	err := r.db.SelectContext(ctx, &list, `
@@ -79,7 +76,6 @@ func (r *StatsRepository) GetUserChallengeStats(ctx context.Context, userID uuid
 	return list, err
 }
 
-// возвращаем все отметки пользователя по всем челленджам
 func (r *StatsRepository) GetUserAllCheckIns(ctx context.Context, userID uuid.UUID) ([]userCheckIn, error) {
 	var list []userCheckIn
 	err := r.db.SelectContext(ctx, &list, `
@@ -89,7 +85,6 @@ func (r *StatsRepository) GetUserAllCheckIns(ctx context.Context, userID uuid.UU
 	return list, err
 }
 
-// возвращаем количество отметок по дням
 func (r *StatsRepository) GetParticipationByDay(ctx context.Context, challengeID uuid.UUID) ([]domain.DayParticipation, error) {
 	var list []domain.DayParticipation
 	err := r.db.SelectContext(ctx, &list, `

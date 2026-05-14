@@ -13,17 +13,18 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"tracker/internal/domain"
+	"tracker/internal/repository"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-	"tracker/internal/domain"
-	"tracker/internal/repository"
 )
 
 var (
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrInvalidToken       = errors.New("invalid or expired token")
-	ErrEmailTaken         = errors.New("email already in use")
+	ErrInvalidCredentials = errors.New("неверный email или пароль")
+	ErrInvalidToken       = errors.New("недействительная или устаревшая ссылка")
+	ErrEmailTaken         = errors.New("пользователь с таким email уже существует")
 	ErrInvalidPassword    = errors.New("пароль должен содержать минимум 8 символов, включая хотя бы одну букву и одну цифру")
 	ErrInvalidEmail       = errors.New("некорректный формат email адреса")
 )

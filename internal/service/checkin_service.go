@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"log/slog"
 	"math"
 	"time"
 
@@ -16,22 +18,40 @@ import (
 )
 
 var (
-	ErrNotParticipant     = errors.New("user is not a participant")
-	ErrNotWorkingDay      = errors.New("today is not a working day for this challenge")
+	ErrNotParticipant     = errors.New("вы не являетесь участником этого челленджа")
+	ErrNotWorkingDay      = errors.New("сегодня не рабочий день в этом челлендже")
 	ErrAlreadyChecked     = errors.New("вы уже отметились сегодня")
-	ErrNotCheckedIn       = errors.New("not checked in today")
-	ErrChallengeNotActive = errors.New("challenge is not active")
+	ErrNotCheckedIn       = errors.New("вы ещё не отметились сегодня")
+	ErrChallengeNotActive = errors.New("челлендж не активен")
 	ErrDeadlinePassed     = errors.New("время для отметки на сегодня уже истекло")
 	ErrUndoNotAllowed     = errors.New("отменить отметку можно только до дедлайна")
 )
 
 func deadlineTodayUTC(deadlineTime string, now time.Time) (time.Time, error) {
-	t, err := time.Parse("15:04:05", deadlineTime)
-	if err != nil {
-		t, err = time.Parse("15:04", deadlineTime)
-		if err != nil {
-			return time.Time{}, err
+	if deadlineTime == "" {
+		return time.Time{}, errors.New("empty deadline_time")
+	}
+	layouts := []string{
+		"15:04:05",
+		"15:04",
+		time.RFC3339Nano,
+		time.RFC3339,
+		"2006-01-02T15:04:05Z",
+		"2006-01-02 15:04:05 -0700 MST",
+	}
+	var t time.Time
+	var lastErr error
+	for _, layout := range layouts {
+		parsed, err := time.Parse(layout, deadlineTime)
+		if err == nil {
+			t = parsed
+			lastErr = nil
+			break
 		}
+		lastErr = err
+	}
+	if lastErr != nil {
+		return time.Time{}, fmt.Errorf("parse deadline_time %q: %w", deadlineTime, lastErr)
 	}
 	n := now.UTC()
 	return time.Date(n.Year(), n.Month(), n.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.UTC), nil
@@ -54,12 +74,10 @@ func NewCheckInService(
 	return &CheckInService{checkIns: ci, challenges: ch, participants: p, feed: f}
 }
 
-// подключаем сервис достижений, чтобы выдавать значки после отметок
 func (s *CheckInService) SetBadgeService(bs *BadgeService) {
 	s.badgeSvc = bs
 }
 
-// создаём отметку на сегодня с необязательным комментарием и фото
 func (s *CheckInService) CheckIn(ctx context.Context, userID, challengeID uuid.UUID, comment, imageURL string) (*domain.SimpleCheckIn, error) {
 	challenge, err := s.challenges.GetByID(ctx, challengeID)
 	if err != nil {
@@ -96,10 +114,31 @@ func (s *CheckInService) CheckIn(ctx context.Context, userID, challengeID uuid.U
 	}
 
 	now := time.Now().UTC()
-	if deadline, derr := deadlineTodayUTC(challenge.DeadlineTime, now); derr == nil {
-		if !now.Before(deadline) {
-			return nil, ErrDeadlinePassed
-		}
+	log.Printf("DEADLINE CHECK: now=%s deadline_raw=%s",
+		time.Now().UTC(), challenge.DeadlineTime)
+	rawDB, rawErr := s.challenges.GetDeadlineTimeText(ctx, challengeID)
+	fmt.Printf("DEBUG deadline_time field: %q, deadline_time from DB: %q (err=%v), now: %s\n",
+		challenge.DeadlineTime, rawDB, rawErr, now.Format(time.RFC3339))
+
+	rawDeadline := challenge.DeadlineTime
+	if rawErr == nil && rawDB != "" {
+		rawDeadline = rawDB
+	}
+	deadline, derr := deadlineTodayUTC(rawDeadline, now)
+	slog.Info("checkin deadline check",
+		"challenge_id", challengeID,
+		"raw_deadline_time", challenge.DeadlineTime,
+		"raw_from_db", rawDB,
+		"parsed_deadline", deadline,
+		"now_utc", now,
+		"parse_err", derr,
+	)
+	if derr != nil {
+		// Если поле не парсится — лучше отказать, чем тихо пропустить проверку.
+		return nil, fmt.Errorf("invalid deadline_time: %w", derr)
+	}
+	if !now.Before(deadline) {
+		return nil, ErrDeadlinePassed
 	}
 
 	exists, err := s.checkIns.ExistsForDate(ctx, challengeID, userID, today)
@@ -134,7 +173,6 @@ func (s *CheckInService) CheckIn(ctx context.Context, userID, challengeID uuid.U
 	allCheckIns, _ := s.checkIns.ListForUser(ctx, challengeID, userID)
 	dayNumber := len(allCheckIns)
 
-	// Считаем текущую серию, чтобы показать её в ленте
 	doneMap := make(map[string]bool)
 	for _, c := range allCheckIns {
 		doneMap[normalizeDate(c.Date).Format("2006-01-02")] = true
@@ -193,10 +231,12 @@ func (s *CheckInService) Undo(ctx context.Context, userID, challengeID uuid.UUID
 		return err
 	}
 
-	if deadline, derr := deadlineTodayUTC(challenge.DeadlineTime, now); derr == nil {
-		if !now.Before(deadline) {
-			return ErrUndoNotAllowed
-		}
+	deadline, derr := deadlineTodayUTC(challenge.DeadlineTime, now)
+	if derr != nil {
+		return fmt.Errorf("invalid deadline_time: %w", derr)
+	}
+	if !now.Before(deadline) {
+		return ErrUndoNotAllowed
 	}
 
 	if err := s.checkIns.Delete(ctx, challengeID, userID, today); err != nil {
@@ -207,7 +247,6 @@ func (s *CheckInService) Undo(ctx context.Context, userID, challengeID uuid.UUID
 	return nil
 }
 
-// возвращаем прогресс пользователя в челлендже
 func (s *CheckInService) GetProgress(ctx context.Context, userID, challengeID uuid.UUID) (*domain.Progress, error) {
 	challenge, err := s.challenges.GetByID(ctx, challengeID)
 	if err != nil {
@@ -270,7 +309,6 @@ func (s *CheckInService) GetProgress(ctx context.Context, userID, challengeID uu
 	}, nil
 }
 
-// возвращает все отметки пользователя в челлендже
 func (s *CheckInService) ListAll(ctx context.Context, challengeID, userID uuid.UUID) ([]domain.SimpleCheckIn, error) {
 	return s.checkIns.ListForUser(ctx, challengeID, userID)
 }

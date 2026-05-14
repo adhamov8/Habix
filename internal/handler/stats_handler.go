@@ -28,16 +28,16 @@ func NewStatsHandler(s *service.StatsService) *StatsHandler {
 func (h *StatsHandler) Leaderboard(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid challenge id", http.StatusBadRequest)
+		jsonError(w, "неверный ID челленджа", http.StatusBadRequest)
 		return
 	}
 	entries, err := h.statsSvc.Leaderboard(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, service.ErrNotFound) {
-			jsonError(w, "challenge not found", http.StatusNotFound)
+			jsonError(w, "челлендж не найден", http.StatusNotFound)
 			return
 		}
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	if entries == nil {
@@ -57,16 +57,16 @@ func (h *StatsHandler) Leaderboard(w http.ResponseWriter, r *http.Request) {
 func (h *StatsHandler) ChallengeStats(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid challenge id", http.StatusBadRequest)
+		jsonError(w, "неверный ID челленджа", http.StatusBadRequest)
 		return
 	}
 	stats, err := h.statsSvc.ChallengeStats(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, service.ErrNotFound) {
-			jsonError(w, "challenge not found", http.StatusNotFound)
+			jsonError(w, "челлендж не найден", http.StatusNotFound)
 			return
 		}
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	jsonResponse(w, stats, http.StatusOK)
@@ -83,13 +83,13 @@ func (h *StatsHandler) ChallengeStats(w http.ResponseWriter, r *http.Request) {
 func (h *StatsHandler) ChallengeSummary(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid challenge id", http.StatusBadRequest)
+		jsonError(w, "неверный ID челленджа", http.StatusBadRequest)
 		return
 	}
 	summary, err := h.statsSvc.ChallengeSummary(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, service.ErrNotFound) {
-			jsonError(w, "challenge not found", http.StatusNotFound)
+			jsonError(w, "челлендж не найден", http.StatusNotFound)
 			return
 		}
 		jsonError(w, err.Error(), http.StatusBadRequest)
@@ -108,7 +108,7 @@ func (h *StatsHandler) PersonalStats(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	stats, err := h.statsSvc.PersonalStats(r.Context(), userID)
 	if err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	jsonResponse(w, stats, http.StatusOK)

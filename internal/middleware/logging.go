@@ -11,7 +11,6 @@ import (
 
 type requestIDKey struct{}
 
-// Возвращает ID запроса из контекста
 func RequestID(ctx context.Context) string {
 	if v, ok := ctx.Value(requestIDKey{}).(string); ok {
 		return v
@@ -19,7 +18,6 @@ func RequestID(ctx context.Context) string {
 	return ""
 }
 
-// Добавляет ID запроса и пишет в лог метод, путь, статус и время
 func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

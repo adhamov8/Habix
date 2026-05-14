@@ -116,13 +116,11 @@ func (s *StatsService) PersonalStats(ctx context.Context, userID uuid.UUID) (*do
 		ps.AvgAdherencePct = math.Round(totalAdherence/float64(adherenceCount)*100) / 100
 	}
 
-	// Считаем максимальную серию по всем челленджам
 	allCheckIns, err := s.stats.GetUserAllCheckIns(ctx, userID)
 	if err != nil {
 		return ps, nil
 	}
 
-	// Простой подсчёт: считаем подряд идущие дни с отметками
 	maxStreak := 0
 	streak := 0
 	var prevDate time.Time
@@ -196,7 +194,7 @@ func (s *StatsService) ChallengeSummary(ctx context.Context, challengeID uuid.UU
 		return nil, ErrNotFound
 	}
 	if challenge.Status != "finished" {
-		return nil, errors.New("challenge is not finished")
+		return nil, errors.New("челлендж ещё не завершён")
 	}
 
 	totalWorkingDays := countWorkingDays(challenge.StartsAt, challenge.EndsAt, challenge.WorkingDays)
@@ -211,7 +209,6 @@ func (s *StatsService) ChallengeSummary(ctx context.Context, challengeID uuid.UU
 		return nil, err
 	}
 
-	// Группируем даты отметок по пользователям
 	userDoneMaps := make(map[uuid.UUID]map[string]bool)
 	for _, ci := range checkIns {
 		if userDoneMaps[ci.UserID] == nil {
@@ -271,7 +268,6 @@ func (s *StatsService) ChallengeSummary(ctx context.Context, challengeID uuid.UU
 		summary.AvgAdherence = math.Round(totalAdherence/float64(len(counts))*100) / 100
 	}
 
-	// Сортируем участников по выполнению (от большего к меньшему)
 	sort.Slice(summary.Participants, func(i, j int) bool {
 		return summary.Participants[i].Adherence > summary.Participants[j].Adherence
 	})
@@ -279,8 +275,6 @@ func (s *StatsService) ChallengeSummary(ctx context.Context, challengeID uuid.UU
 	return summary, nil
 }
 
-// берём только год/месяц/день и возвращает полночь UTC.
-// Так мы убираем часовой пояс, который lib/pq добавляет к DATE-полю.
 func normalizeDate(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 }
@@ -308,7 +302,6 @@ func countWorkingDays(startsAt, endsAt time.Time, workingDays []int64) int {
 	return count
 }
 
-// считаем текущую и максимальную серию по набору дат отметок
 func computeStreaksSimple(doneMap map[string]bool, startsAt, endsAt time.Time, workingDaySet map[int]bool) (current, max int) {
 	start := normalizeDate(startsAt)
 	end := normalizeDate(endsAt)
@@ -317,7 +310,6 @@ func computeStreaksSimple(doneMap map[string]bool, startsAt, endsAt time.Time, w
 		end = today
 	}
 
-	// Идём по рабочим дням от начала до конца
 	var workingDayList []time.Time
 	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
 		dayIdx := (int(d.Weekday()) + 6) % 7

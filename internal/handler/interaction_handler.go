@@ -23,7 +23,7 @@ func (h *InteractionHandler) AddComment(w http.ResponseWriter, r *http.Request) 
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	checkInID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid check-in id", http.StatusBadRequest)
+		jsonError(w, "неверный ID отметки", http.StatusBadRequest)
 		return
 	}
 
@@ -31,17 +31,17 @@ func (h *InteractionHandler) AddComment(w http.ResponseWriter, r *http.Request) 
 		Text string `json:"text"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Text == "" {
-		jsonError(w, "text is required", http.StatusBadRequest)
+		jsonError(w, "текст обязателен", http.StatusBadRequest)
 		return
 	}
 
 	comment, err := h.interactionSvc.AddComment(r.Context(), checkInID, userID, req.Text)
 	if err != nil {
 		if errors.Is(err, service.ErrNotFound) {
-			jsonError(w, "check-in not found", http.StatusNotFound)
+			jsonError(w, "отметка не найдена", http.StatusNotFound)
 			return
 		}
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	jsonResponse(w, comment, http.StatusCreated)
@@ -50,13 +50,13 @@ func (h *InteractionHandler) AddComment(w http.ResponseWriter, r *http.Request) 
 func (h *InteractionHandler) GetComments(w http.ResponseWriter, r *http.Request) {
 	checkInID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid check-in id", http.StatusBadRequest)
+		jsonError(w, "неверный ID отметки", http.StatusBadRequest)
 		return
 	}
 
 	comments, err := h.interactionSvc.GetComments(r.Context(), checkInID)
 	if err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	jsonResponse(w, comments, http.StatusOK)
@@ -66,17 +66,17 @@ func (h *InteractionHandler) ToggleLike(w http.ResponseWriter, r *http.Request) 
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	checkInID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid check-in id", http.StatusBadRequest)
+		jsonError(w, "неверный ID отметки", http.StatusBadRequest)
 		return
 	}
 
 	liked, err := h.interactionSvc.ToggleLike(r.Context(), checkInID, userID)
 	if err != nil {
 		if errors.Is(err, service.ErrNotFound) {
-			jsonError(w, "check-in not found", http.StatusNotFound)
+			jsonError(w, "отметка не найдена", http.StatusNotFound)
 			return
 		}
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	jsonResponse(w, map[string]bool{"liked": liked}, http.StatusOK)

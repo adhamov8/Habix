@@ -3,10 +3,11 @@ package handler
 import (
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"tracker/internal/middleware"
 	"tracker/internal/service"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 type BadgeHandler struct {
@@ -25,7 +26,7 @@ func NewBadgeHandler(s *service.BadgeService) *BadgeHandler {
 func (h *BadgeHandler) ListDefinitions(w http.ResponseWriter, r *http.Request) {
 	list, err := h.badgeSvc.ListDefinitions(r.Context())
 	if err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	if list == nil {
@@ -44,7 +45,7 @@ func (h *BadgeHandler) MyBadges(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	list, err := h.badgeSvc.GetUserBadges(r.Context(), userID)
 	if err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	if list == nil {
@@ -63,12 +64,12 @@ func (h *BadgeHandler) MyBadges(w http.ResponseWriter, r *http.Request) {
 func (h *BadgeHandler) UserBadges(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid user id", http.StatusBadRequest)
+		jsonError(w, "неверный ID пользователя", http.StatusBadRequest)
 		return
 	}
 	list, err := h.badgeSvc.GetUserBadges(r.Context(), id)
 	if err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	if list == nil {

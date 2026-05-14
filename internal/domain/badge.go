@@ -20,9 +20,8 @@ type UserBadge struct {
 	BadgeID     int        `db:"badge_id"     json:"badge_id"`
 	ChallengeID *uuid.UUID `db:"challenge_id" json:"challenge_id"`
 	EarnedAt    time.Time  `db:"earned_at"    json:"earned_at"`
-	// Поля подтянутые из таблицы badge_definitions
-	Code        string `db:"code"         json:"code"`
-	Title       string `db:"title"        json:"title"`
-	Description string `db:"description"  json:"description"`
-	Icon        string `db:"icon"         json:"icon"`
+	Code        string     `db:"code"         json:"code"`
+	Title       string     `db:"title"        json:"title"`
+	Description string     `db:"description"  json:"description"`
+	Icon        string     `db:"icon"         json:"icon"`
 }

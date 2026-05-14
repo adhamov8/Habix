@@ -34,7 +34,6 @@ var (
 	}, func() float64 { return 0 })
 )
 
-// Регистрирует метрику db_connections_open для конкретного подключения к БД
 func RegisterDBStats(db *sqlx.DB) {
 	prometheus.Unregister(DBConnectionsOpen)
 	prometheus.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{

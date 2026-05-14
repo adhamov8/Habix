@@ -34,34 +34,34 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Name     string `json:"name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonError(w, "invalid request body", http.StatusBadRequest)
+		jsonError(w, "неверный формат запроса", http.StatusBadRequest)
 		return
 	}
 
 	if !emailRegex.MatchString(req.Email) {
-		jsonError(w, "Некорректный формат email", http.StatusBadRequest)
+		jsonError(w, "некорректный формат email", http.StatusBadRequest)
 		return
 	}
 	if len(req.Name) < 2 || len(req.Name) > 50 {
-		jsonError(w, "Имя должно содержать от 2 до 50 символов", http.StatusBadRequest)
+		jsonError(w, "имя должно содержать от 2 до 50 символов", http.StatusBadRequest)
 		return
 	}
 	if !isValidPassword(req.Password) {
-		jsonError(w, "Пароль должен содержать минимум 8 символов, включая буквы и цифры", http.StatusBadRequest)
+		jsonError(w, "пароль должен содержать минимум 8 символов, включая буквы и цифры", http.StatusBadRequest)
 		return
 	}
 
 	pair, err := h.authSvc.Register(r.Context(), req.Email, req.Password, req.Name)
 	if err != nil {
 		if errors.Is(err, service.ErrEmailTaken) {
-			jsonError(w, "Пользователь с таким email уже существует", http.StatusConflict)
+			jsonError(w, "пользователь с таким email уже существует", http.StatusConflict)
 			return
 		}
 		if errors.Is(err, service.ErrInvalidPassword) {
 			jsonError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	jsonResponse(w, pair, http.StatusCreated)
@@ -97,17 +97,17 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonError(w, "invalid request body", http.StatusBadRequest)
+		jsonError(w, "неверный формат запроса", http.StatusBadRequest)
 		return
 	}
 
 	pair, err := h.authSvc.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidCredentials) {
-			jsonError(w, "Неверный email или пароль", http.StatusUnauthorized)
+			jsonError(w, "неверный email или пароль", http.StatusUnauthorized)
 			return
 		}
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	jsonResponse(w, pair, http.StatusOK)
@@ -124,17 +124,17 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		RefreshToken string `json:"refresh_token"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.RefreshToken == "" {
-		jsonError(w, "refresh_token is required", http.StatusBadRequest)
+		jsonError(w, "требуется refresh_token", http.StatusBadRequest)
 		return
 	}
 
 	pair, err := h.authSvc.Refresh(r.Context(), req.RefreshToken)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidToken) {
-			jsonError(w, "invalid or expired token", http.StatusUnauthorized)
+			jsonError(w, "недействительная или устаревшая ссылка", http.StatusUnauthorized)
 			return
 		}
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	jsonResponse(w, pair, http.StatusOK)
@@ -151,7 +151,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		RefreshToken string `json:"refresh_token"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.RefreshToken == "" {
-		jsonError(w, "refresh_token is required", http.StatusBadRequest)
+		jsonError(w, "требуется refresh_token", http.StatusBadRequest)
 		return
 	}
 	_ = h.authSvc.Logout(r.Context(), req.RefreshToken)

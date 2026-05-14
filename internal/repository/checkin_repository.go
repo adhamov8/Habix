@@ -18,7 +18,6 @@ func NewCheckInRepository(db *sqlx.DB) *CheckInRepository {
 	return &CheckInRepository{db: db}
 }
 
-// добавляем новую отметку и возвращает её
 func (r *CheckInRepository) Create(ctx context.Context, ci *domain.SimpleCheckIn) error {
 	return r.db.QueryRowContext(ctx, `
 		INSERT INTO checkins (id, challenge_id, user_id, date, comment, image_url)
@@ -28,7 +27,6 @@ func (r *CheckInRepository) Create(ctx context.Context, ci *domain.SimpleCheckIn
 	).Scan(&ci.CreatedAt)
 }
 
-// удаляем отметку по челленджу, пользователю и дате
 func (r *CheckInRepository) Delete(ctx context.Context, challengeID, userID uuid.UUID, date time.Time) error {
 	_, err := r.db.ExecContext(ctx, `
 		DELETE FROM checkins
@@ -37,7 +35,6 @@ func (r *CheckInRepository) Delete(ctx context.Context, challengeID, userID uuid
 	return err
 }
 
-// проверяем, есть ли отметка для указанной пары (челлендж, пользователь, дата)
 func (r *CheckInRepository) ExistsForDate(ctx context.Context, challengeID, userID uuid.UUID, date time.Time) (bool, error) {
 	var exists bool
 	err := r.db.QueryRowContext(ctx, `
@@ -48,7 +45,6 @@ func (r *CheckInRepository) ExistsForDate(ctx context.Context, challengeID, user
 	return exists, err
 }
 
-// возвращаем отметку за указанную дату, либо sql.ErrNoRows
 func (r *CheckInRepository) GetForDate(ctx context.Context, challengeID, userID uuid.UUID, date time.Time) (*domain.SimpleCheckIn, error) {
 	var ci domain.SimpleCheckIn
 	if err := r.db.GetContext(ctx, &ci, `
@@ -61,7 +57,6 @@ func (r *CheckInRepository) GetForDate(ctx context.Context, challengeID, userID 
 	return &ci, nil
 }
 
-// возвращаем все отметки пользователя в челлендже
 func (r *CheckInRepository) ListForUser(ctx context.Context, challengeID, userID uuid.UUID) ([]domain.SimpleCheckIn, error) {
 	var list []domain.SimpleCheckIn
 	err := r.db.SelectContext(ctx, &list, `
@@ -72,7 +67,6 @@ func (r *CheckInRepository) ListForUser(ctx context.Context, challengeID, userID
 	return list, err
 }
 
-// возвращаем все отметки в челлендже
 func (r *CheckInRepository) ListForChallenge(ctx context.Context, challengeID uuid.UUID) ([]domain.SimpleCheckIn, error) {
 	var list []domain.SimpleCheckIn
 	err := r.db.SelectContext(ctx, &list, `
@@ -83,7 +77,6 @@ func (r *CheckInRepository) ListForChallenge(ctx context.Context, challengeID uu
 	return list, err
 }
 
-// возвращаем количество отметок каждого участника в челлендже
 func (r *CheckInRepository) CountByUser(ctx context.Context, challengeID uuid.UUID) (map[uuid.UUID]int, error) {
 	type row struct {
 		UserID uuid.UUID `db:"user_id"`
@@ -105,7 +98,6 @@ func (r *CheckInRepository) CountByUser(ctx context.Context, challengeID uuid.UU
 	return m, nil
 }
 
-// возвращаем отметку по ID (нужно для проверки ссылок в ленте)
 func (r *CheckInRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.SimpleCheckIn, error) {
 	var ci domain.SimpleCheckIn
 	if err := r.db.GetContext(ctx, &ci, `

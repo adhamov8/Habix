@@ -62,6 +62,9 @@ export default function ChallengeNew() {
     e.preventDefault()
     setError('')
     try {
+      // getTimezoneOffset() возвращает минуты "позади UTC" с обратным знаком
+       // (для Москвы UTC+3 это -180), поэтому домножаем на -1.
+      const offsetMinutes = new Date().getTimezoneOffset() * -1
       const { data } = await challengeApi.create({
         title,
         description: description || undefined,
@@ -71,6 +74,7 @@ export default function ChallengeNew() {
         working_days: workingDays,
         max_skips: maxSkips,
         deadline_time: deadlineTime,
+        deadline_timezone_offset_minutes: offsetMinutes,
         is_public: isPublic,
       } as any)
       navigate(`/challenges/${data.id}`)
@@ -141,10 +145,10 @@ export default function ChallengeNew() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
           <div className="form-group">
-            <label>Дедлайн (UTC)</label>
+            <label>Дедлайн</label>
             <input type="time" value={deadlineTime} onChange={(e) => setDeadlineTime(e.target.value)} />
             <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
-              Время до которого нужно отметиться (UTC)
+              Время до которого нужно отметиться каждый день
             </div>
           </div>
           <div className="form-group">

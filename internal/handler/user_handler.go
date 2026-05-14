@@ -30,7 +30,7 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	user, err := h.users.GetByID(r.Context(), userID)
 	if err != nil {
-		jsonError(w, "user not found", http.StatusNotFound)
+		jsonError(w, "пользователь не найден", http.StatusNotFound)
 		return
 	}
 	jsonResponse(w, user, http.StatusOK)
@@ -52,13 +52,13 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		Timezone *string `json:"timezone"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonError(w, "invalid request body", http.StatusBadRequest)
+		jsonError(w, "неверный формат запроса", http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.users.GetByID(r.Context(), userID)
 	if err != nil {
-		jsonError(w, "user not found", http.StatusNotFound)
+		jsonError(w, "пользователь не найден", http.StatusNotFound)
 		return
 	}
 
@@ -73,7 +73,7 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.users.Update(r.Context(), user); err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	jsonResponse(w, user, http.StatusOK)
@@ -89,19 +89,19 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid user id", http.StatusBadRequest)
+		jsonError(w, "неверный ID пользователя", http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.users.GetByID(r.Context(), id)
 	if err != nil {
-		jsonError(w, "user not found", http.StatusNotFound)
+		jsonError(w, "пользователь не найден", http.StatusNotFound)
 		return
 	}
 
 	stats, err := h.statsSvc.PersonalStats(r.Context(), id)
 	if err != nil {
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 

@@ -23,7 +23,7 @@ func (h *FeedHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	challengeID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		jsonError(w, "invalid challenge id", http.StatusBadRequest)
+		jsonError(w, "неверный ID челленджа", http.StatusBadRequest)
 		return
 	}
 
@@ -37,10 +37,10 @@ func (h *FeedHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
 	events, err := h.feedSvc.GetFeed(r.Context(), challengeID, userID, limit, offset)
 	if err != nil {
 		if errors.Is(err, service.ErrForbidden) {
-			jsonError(w, "forbidden", http.StatusForbidden)
+			jsonError(w, "действие запрещено", http.StatusForbidden)
 			return
 		}
-		jsonError(w, "internal server error", http.StatusInternalServerError)
+		jsonError(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 	jsonResponse(w, events, http.StatusOK)

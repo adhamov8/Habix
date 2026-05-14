@@ -61,5 +61,4 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 }))
 
-// Запускаем сразу, не блокируя загрузку
 useAuth.getState().init()

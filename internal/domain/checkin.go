@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Старые типы оставлены ради таблицы check_ins (комментарии и лайки ещё ссылаются на неё)
 type CheckIn struct {
 	ID          uuid.UUID `db:"id"           json:"id"`
 	ChallengeID uuid.UUID `db:"challenge_id" json:"challenge_id"`
@@ -25,7 +24,6 @@ type CheckInImage struct {
 	CreatedAt time.Time `db:"created_at"  json:"created_at"`
 }
 
-// Новая упрощённая отметка: сам факт отметки и опциональный комментарий
 type SimpleCheckIn struct {
 	ID          uuid.UUID `db:"id"           json:"id"`
 	ChallengeID uuid.UUID `db:"challenge_id" json:"challenge_id"`

@@ -10,8 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Интерфейсы репозиториев чтобы можно было подменять их моками в тестах
-
 type UserRepo interface {
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)
 	Create(ctx context.Context, user *domain.User) error
@@ -40,6 +38,7 @@ type ChallengeRepo interface {
 	SetStatus(ctx context.Context, id uuid.UUID, status string) error
 	ListForUser(ctx context.Context, userID uuid.UUID) ([]domain.Challenge, error)
 	ListPublic(ctx context.Context, categoryID *int, search string, limit, offset int) ([]domain.Challenge, error)
+	GetDeadlineTimeText(ctx context.Context, id uuid.UUID) (string, error)
 }
 
 type ParticipantRepo interface {
